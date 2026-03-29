@@ -1,0 +1,1658 @@
+/**
+ * Generuje tabelę Nastawnia dla danego obiektu
+ * @param {number} objectId - ID obiektu
+ */
+ 
+function generateNastawniaTable(objectId) {
+    const tableBody = document.querySelector(`#nastawniaTable_${objectId} tbody`);
+
+    // Dodanie kreatora przed tabelą
+    const creatorDiv = document.createElement('div');
+    creatorDiv.className = 'nastawnia-creator';
+    creatorDiv.id = `nastawniaCreator_${objectId}`;
+
+    // Pobierz stan checkboxów
+    const lcsCheckbox = document.getElementById(`lcs_${objectId}`);
+    const lprCheckbox = document.getElementById(`lpr_${objectId}`);
+    const redLightCheckbox = document.getElementById(`redLight_${objectId}`);
+    const isLcsEnabled = lcsCheckbox && lcsCheckbox.checked;
+
+    // Sprawdź czy połączone są obiekty KAT A
+    const hasKatAObjects = checkForConnectedKatAObjects(objectId);
+
+	let creatorHTML = `
+        <div class="nastawnia-creator-header">
+            <h3>Kreator Nastawni</h3>
+            <p class="info-text">Skonfiguruj dodatkowe parametry nastawni</p>
+        </div>
+        <div class="creator-form">
+		</div>
+		<div class="creator-item">
+            <div class="checkbox-option">
+                <input type="checkbox" id="lcsCreator_${objectId}" ${isLcsEnabled ? 'checked' : ''} disabled>
+                <label for="lcsCreator_${objectId}">Nastawnia ${isLcsEnabled ? 'Jest' : 'nie jest'} LCS</label>
+        </div>
+        </div>
+		        <div class="section-header">
+            <h3>Konfiguracja rejestratora</h3>
+        <div class="recorder-options">
+            <label for="recording_days_${objectId}">Liczba dni zapisu dla kamer:</label>
+            <select id="recording_days_${objectId}" class="recorder-model-select">
+                <option value="7" selected>7 dni</option>
+                <option value="14">14 dni</option>
+                <option value="21">21 dni</option>
+                <option value="28">28 dni</option>
+                <option value="30">30 dni</option>
+                <option value="60">60 dni</option>
+            </select>
+		
+            <label for="recorder_model_${objectId}">Model rejestratora:</label>
+            <select id="recorder_model_${objectId}" class="recorder-model-select">
+                <option value="auto">Automatyczny dobór</option>
+                <option value="WJ-NU101">WJ-NU101 (1-4 kamery)</option>
+                <option value="WJ-NU300">WJ-NU300 (5-16 kamer)</option>
+                <option value="WJ-NU301">WJ-NU301 (5-16 kamer, podwójne dyski)</option>
+                <option value="WJ-NX310">WJ-NX310 (17-32 kamery)</option>
+                <option value="WJ-NX410">WJ-NX410 (33-64 kamery)</option>
+				<option value="WJ-NX510">WJ-NX510 (65-128 kamery)</option>
+            </select>
+        </div>
+        </div>        
+        <div id="recorder_requirements_${objectId}" class="recorder-requirements"></div>
+        <div id="recorder_info_${objectId}" class="recorder-info"></div>
+        <div id="storage_status_${objectId}" class="storage-status"></div>
+        
+			<div class="disk-config-container" id="disk_config_container_${objectId}" style="display: none;">
+            <h4>Konfiguracja dysków</h4>
+            <div class="disk-config-mode">
+                <button type="button" id="autoConfigBtn_${objectId}" class="config-mode-btn active" 
+                        onclick="switchToAutoConfig(${objectId})">Automatycznie</button>
+                <button type="button" id="manualConfigBtn_${objectId}" class="config-mode-btn" 
+                        onclick="switchToManualConfig(${objectId})">Ręcznie</button>
+            </div>
+            <div class="disk-slots" id="disk_slots_${objectId}">
+                <!-- Sloty na dyski będą dodane dynamicznie -->
+            </div>
+        </div>
+    `;
+
+    // Liczba monitorów
+    creatorHTML += `
+        <div class="creator-item">
+            <label for="monitors_count_${objectId}">Liczba monitorów:</label>
+            <select id="monitors_count_${objectId}" class="creator-select">
+                ${Array.from({length: 101}, (_, i) => `<option value="${i}">${i}</option>`).join('')}
+            </select>
+        </div>
+    `;
+
+    // Rozmiar monitorów
+    creatorHTML += `
+        <div class="creator-item">
+            <label for="monitor_size_${objectId}">Rozmiar monitora:</label>
+            <div class="size-input-container">
+                <select id="monitor_size_${objectId}" class="creator-input">
+                    <option value="15.6">15.6″</option>
+                    <option value="17">17″</option>
+                    <option value="18.5">18.5″</option>
+                    <option value="19">19″</option>
+                    <option value="19.5">19.5″</option>
+                    <option value="20">20″</option>
+                    <option value="21.5">21.5″</option>
+                    <option value="22">22″</option>
+                    <option value="23">23″</option>
+                    <option value="23.6">23.6″</option>
+                    <option value="23.8" selected>23.8″</option>
+                    <option value="24">24″</option>
+                    <option value="25">25″</option>
+                    <option value="27">27″</option>
+                    <option value="28">28″</option>
+                    <option value="29">29″</option>
+                    <option value="31.5">31.5″</option>
+                    <option value="32">32″</option>
+                    <option value="39">39″</option>
+                    <option value="40">40″</option>
+                    <option value="42">42″</option>
+                    <option value="43">43″</option>
+                    <option value="48">48″</option>
+                    <option value="49">49″</option>
+                    <option value="50">50″</option>
+                    <option value="55">55″</option>
+                    <option value="58">58″</option>
+                    <option value="60">60″</option>
+                    <option value="65">65″</option>
+                    <option value="70">70″</option>
+                    <option value="75">75″</option>
+                    <option value="77">77″</option>
+                    <option value="82">82″</option>
+                    <option value="85">85″</option>
+                    <option value="86">86″</option>
+                    <option value="98">98″</option>
+                    <option value="100">100″</option>
+                </select>
+            </div>
+        </div>
+    `;
+
+    // Rozmiar szafy RACK
+    creatorHTML += `
+        <div class="creator-item">
+            <label for="rack_size_${objectId}">Rozmiar szafy RACK 19″:</label>
+            <select id="rack_size_${objectId}" class="creator-select">
+                <option value="24U">24U</option>
+                <option value="42U" selected>42U</option>
+                <option value="48U">48U</option>
+                <option value="SPECJALNA">SPECJALNA</option>
+            </select>
+        </div>
+    `;
+
+    // Typ komputera
+    creatorHTML += `
+        <div class="creator-item">
+            <label for="computer_type_${objectId}">Zastosowane komputery:</label>
+            <select id="computer_type_${objectId}" class="creator-select">
+                <option value="MINI PC" selected>MINI PC</option>
+                <option value="PC">PC</option>
+            </select>
+        </div>
+    `;
+
+    // Opcja monitory na PC (widoczna tylko jeśli wybrano PC)
+    creatorHTML += `
+        <div id="monitorsPerPcContainer_${objectId}" class="creator-item" style="display: none;">
+            <label for="monitors_per_pc_${objectId}">Monitorów na PC:</label>
+            <select id="monitors_per_pc_${objectId}" class="creator-select">
+                <option value="2">2 monitory</option>
+                <option value="3">3 monitory</option>
+                <option value="4" selected>4 monitory</option>
+                <option value="special">Konfiguracja specjalna</option>
+            </select>
+        </div>
+    `;
+
+    // Przycisk aktualizacji tabeli
+    creatorHTML += `
+        <div class="creator-buttons">
+            <button type="button" id="updateNastawnia_${objectId}" class="update-nastawnia-btn">🔄 Aktualizuj wyposażenie</button>
+        </div>
+    `;
+
+    creatorHTML += `</div>`;
+    creatorDiv.innerHTML = creatorHTML;
+
+    // Wstaw kreator przed tabelą
+    const nastawniaCalculator = document.getElementById(`nastawniaCalculator_${objectId}`);
+    if (nastawniaCalculator) {
+        const calculatorTitle = nastawniaCalculator.querySelector('h3');
+        if (calculatorTitle) {
+            nastawniaCalculator.insertBefore(creatorDiv, calculatorTitle.nextSibling);
+        }
+    }
+
+    tableBody.innerHTML = '';
+    generateNastawniaEquipment(objectId, tableBody);
+
+    // Obsługa eventów i auto-refresh
+    setTimeout(() => {
+        // Przycisk ręcznego odświeżenia
+        const updateButton = document.getElementById(`updateNastawnia_${objectId}`);
+        if (updateButton) {
+            updateButton.addEventListener('click', () => {
+                updateNastawniaEquipment(objectId);
+            });
+        }
+
+        // Typ komputera
+        const computerTypeSelect = document.getElementById(`computer_type_${objectId}`);
+        const monitorsPerPcContainer = document.getElementById(`monitorsPerPcContainer_${objectId}`);
+        if (computerTypeSelect && monitorsPerPcContainer) {
+            computerTypeSelect.addEventListener('change', function() {
+                monitorsPerPcContainer.style.display = (this.value === 'PC') ? 'block' : 'none';
+                updateNastawniaEquipment(objectId);
+            });
+        }
+
+        // Odświeżanie rejestratora przy każdej zmianie powiązanych pól
+        const recorderSelect = document.getElementById(`recorder_model_${objectId}`);
+        if (recorderSelect) {
+            recorderSelect.addEventListener('change', () => {
+                updateRecorderInfo(objectId);
+                updateNastawniaEquipment(objectId);
+            });
+        }
+
+        document.getElementById(`recording_days_${objectId}`).addEventListener('change', () => {
+            updateStorageInfo(objectId);
+            updateRecorderInfo(objectId);
+            updateNastawniaEquipment(objectId);
+        });
+
+        document.getElementById(`monitors_count_${objectId}`).addEventListener('change', () => updateNastawniaEquipment(objectId));
+        document.getElementById(`monitor_size_${objectId}`).addEventListener('change', () => updateNastawniaEquipment(objectId));
+        document.getElementById(`rack_size_${objectId}`).addEventListener('change', () => updateNastawniaEquipment(objectId));
+        document.getElementById(`computer_type_${objectId}`).addEventListener('change', () => updateNastawniaEquipment(objectId));
+        document.getElementById(`monitors_per_pc_${objectId}`).addEventListener('change', () => updateNastawniaEquipment(objectId));
+
+        // Odświeżaj automatycznie info o rejestratorze przy każdym update
+        updateStorageInfo(objectId);
+        updateRecorderInfo(objectId);
+    }, 100);
+}
+
+/**
+ * Funkcja wywoływana do aktualizacji informacji o rejestratorze i walidacji
+ * @param {number} nastawniaId
+ */
+function updateRecorderInfo(nastawniaId) {
+    const recorderSelect = document.getElementById(`recorder_model_${nastawniaId}`);
+    const recorderInfoDiv = document.getElementById(`recorder_info_${nastawniaId}`);
+    const recorderRequirementsDiv = document.getElementById(`recorder_requirements_${nastawniaId}`);
+
+    if (!recorderSelect || !recorderInfoDiv || !recorderRequirementsDiv) return;
+
+    const selectedModel = recorderSelect.value;
+    const cameraCount = countSKPAndKATACameras(nastawniaId);
+    const recordingDays = parseInt(document.getElementById(`recording_days_${nastawniaId}`)?.value) || 7;
+    const requiredStorage = calculateRequiredStorage(cameraCount, recordingDays);
+
+    recorderRequirementsDiv.innerHTML = `
+        <strong>Aktualne wymagania:</strong><br>
+        • Liczba wykrytych kamer: ${cameraCount}<br>
+        • Wymagana pojemność dla ${recordingDays} dni zapisu: ${requiredStorage.toFixed(2)} TB<br>
+    `;
+
+    // Funkcja tworząca interfejs konfiguracji dysków
+    function createDiskConfigUI(recorderInfo, diskConfig, isAutoConfig = true) {
+        if (!recorderInfo || !diskConfig) return '';
+
+        const availableDiskCapacities = DISK_CAPACITIES[recorderInfo.model] || DISK_CAPACITIES['default'];
+        let diskConfigUI = `
+            <div class="disk-config-container" id="diskConfigContainer_${nastawniaId}">
+                <div class="disk-config-header">
+                    <h4>Konfiguracja dysków</h4>
+                    <div class="disk-config-mode">
+                        <button type="button" id="autoConfigBtn_${nastawniaId}" class="config-mode-btn ${isAutoConfig ? 'active' : ''}" 
+                                onclick="switchToAutoConfig(${nastawniaId})">Automatycznie</button>
+                        <button type="button" id="manualConfigBtn_${nastawniaId}" class="config-mode-btn ${!isAutoConfig ? 'active' : ''}" 
+                                onclick="switchToManualConfig(${nastawniaId})">Ręcznie</button>
+                    </div>
+                </div>
+        `;
+
+        if (isAutoConfig) {
+            // Automatyczna konfiguracja
+            if (diskConfig.disksConfiguration && diskConfig.disksConfiguration.length > 0) {
+                const nonEmptyDisks = diskConfig.disksConfiguration.filter(size => size > 0);
+                diskConfigUI += `
+                    <div class="auto-config-display">
+                        <div class="config-summary">
+                            <strong>Automatyczna konfiguracja:</strong><br>
+                            • Dyski: ${nonEmptyDisks.join(' TB, ')} TB<br>
+                            • Wykorzystane kieszenie: ${diskConfig.minimumRequiredSlots || nonEmptyDisks.length} z ${recorderInfo.diskSlots}<br>
+                            • Łączna pojemność: ${diskConfig.totalStorage} TB
+                        </div>
+                    </div>
+                `;
+            } else {
+                diskConfigUI += `<div class="config-info">Brak dysków do konfiguracji</div>`;
+            }
+        } else {
+            // Ręczna konfiguracja
+            diskConfigUI += `
+                <div class="manual-config-display">
+                    <div class="disk-slots-horizontal">
+            `;
+
+            for (let i = 0; i < recorderInfo.diskSlots; i++) {
+                const currentDiskSize = (diskConfig.disksConfiguration && diskConfig.disksConfiguration[i]) ? diskConfig.disksConfiguration[i] : 0;
+                
+                diskConfigUI += `
+                    <div class="disk-slot-horizontal">
+                        <label for="diskSlot_${nastawniaId}_${i}">Slot ${i + 1}:</label>
+                        <select id="diskSlot_${nastawniaId}_${i}" class="disk-select" onchange="updateManualDiskConfig(${nastawniaId})">
+                            <option value="0" ${currentDiskSize === 0 ? 'selected' : ''}>Pusty</option>
+                            ${availableDiskCapacities.map(size => 
+                                `<option value="${size}" ${currentDiskSize === size ? 'selected' : ''}>${size} TB</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                `;
+            }
+
+            diskConfigUI += `
+                    </div>
+                    <div class="manual-config-summary">
+                        <div class="summary-row">
+                            <span>Aktualna pojemność:</span>
+                            <span id="currentStorage_${nastawniaId}">${diskConfig.totalStorage || 0} TB</span>
+                        </div>
+                        <div class="summary-row">
+                            <span>Wymagana pojemność:</span>
+                            <span>${requiredStorage.toFixed(2)} TB</span>
+                        </div>
+                        <div class="summary-row status" id="storageStatus_${nastawniaId}">
+                            ${diskConfig.totalStorage >= requiredStorage ? 
+                                '<span class="status-ok">✅ Wystarczająca pojemność</span>' : 
+                                '<span class="status-warning">⚠️ Niewystarczająca pojemność</span>'
+                            }
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        diskConfigUI += `</div>`;
+        return diskConfigUI;
+    }
+
+    if (selectedModel === 'auto') {
+        const recommendedRecorder = checkIfRecorderNeeded(nastawniaId);
+        if (recommendedRecorder) {
+            const recorderInfo = getRecorderInfo(recommendedRecorder.model);
+            const diskConfig = calculateOptimalDiskConfiguration(recorderInfo, requiredStorage / (recommendedRecorder.ilosc || 1));
+            const diskConfigUI = createDiskConfigUI(recorderInfo, diskConfig, true);
+
+            recorderInfoDiv.innerHTML = `
+                <strong>Informacje o rekomendowanym rejestratorze (${recommendedRecorder.model}):</strong><br>
+                • Maksymalna liczba kamer: ${recorderInfo?.maxCameras || 'N/A'}<br>
+                • Liczba kieszeni na dyski: ${recommendedRecorder.diskSlots}<br>
+                • Maksymalna pojemność: ${recommendedRecorder.maxStorage} TB<br>
+                ${recommendedRecorder.warning ? `<span class="warning">⚠️ ${recommendedRecorder.warning}</span>` : '<span class="success">✅ Zgodny z wymaganiami</span>'}
+                ${diskConfigUI}
+            `;
+        } else {
+            recorderInfoDiv.innerHTML = `
+                <strong>Informacje o rejestratorze:</strong><br>
+                <span class="info">ℹ️ Rejestrator nie jest wymagany dla tej nastawni</span>
+            `;
+        }
+    } else {
+        const recorderInfo = getRecorderInfo(selectedModel);
+        if (recorderInfo) {
+            let warningMessage = '';
+            let isCompatible = true;
+
+            if (cameraCount > recorderInfo.maxCameras) {
+                const recorderCount = Math.ceil(cameraCount / recorderInfo.maxCameras);
+                warningMessage += `⚠️ Liczba kamer (${cameraCount}) przekracza maksymalną obsługiwaną przez pojedynczy ${recorderInfo.model} (${recorderInfo.maxCameras}).<br>`;
+                warningMessage += `ℹ️ Zostanie dodanych ${recorderCount} szt. rejestratora, aby obsłużyć wszystkie kamery.<br>`;
+                isCompatible = false;
+            }
+
+            if (requiredStorage > recorderInfo.maxStorage) {
+                if (recorderInfo.maxStorageWithExtension) {
+                    if (requiredStorage > recorderInfo.maxStorageWithExtension) {
+                        warningMessage += `⚠️ Wymagana pojemność (${requiredStorage.toFixed(2)} TB) przekracza maksymalną (${recorderInfo.maxStorageWithExtension} TB)<br>`;
+                        isCompatible = false;
+                    } else {
+                        warningMessage += `⚠️ Wymagana pojemność (${requiredStorage.toFixed(2)} TB) wymaga jednostki rozszerzającej ${recorderInfo.extensionUnit}<br>`;
+                    }
+                } else {
+                    warningMessage += `⚠️ Wymagana pojemność (${requiredStorage.toFixed(2)} TB) przekracza maksymalną (${recorderInfo.maxStorage} TB)<br>`;
+                    isCompatible = false;
+                }
+            }
+
+            // Sprawdź typ nastawni
+            const isLcs = document.getElementById(`lcs_${nastawniaId}`)?.checked;
+            const connectedToLcs = isNastawiaConnectedToLCS(nastawniaId);
+            if (!isLcs && connectedToLcs) {
+                warningMessage += `⚠️ Nastawnia bez LCS podłączona do nastawni z LCS zwykle nie wymaga rejestratora<br>`;
+            }
+
+            // Sprawdź czy istnieje zapisana ręczna konfiguracja
+            let manualConfig = getManualDiskConfiguration ? getManualDiskConfiguration(nastawniaId, selectedModel) : null;
+            let isManualMode = manualConfig !== null;
+            
+            // Oblicz konfigurację dysków
+            const diskConfig = isManualMode ? 
+                { disksConfiguration: manualConfig, totalStorage: manualConfig.reduce((sum, size) => sum + size, 0) } :
+                calculateOptimalDiskConfiguration(recorderInfo, requiredStorage);
+
+            const diskConfigUI = createDiskConfigUI(recorderInfo, diskConfig, !isManualMode);
+
+            recorderInfoDiv.innerHTML = `
+                <strong>Informacje o rejestratorze (${recorderInfo.model}):</strong><br>
+                • Maksymalna liczba kamer: ${recorderInfo.maxCameras}<br>
+                • Liczba kieszeni na dyski: ${recorderInfo.diskSlots}<br>
+                • Maksymalna pojemność: ${recorderInfo.maxStorage} TB<br>
+                ${warningMessage || (isCompatible ? '<span class="success">✅ Zgodny z wymaganiami</span>' : '')}
+                ${diskConfigUI}
+            `;
+        } else {
+            recorderInfoDiv.innerHTML = `
+                <strong>Informacje o rejestratorze:</strong><br>
+                <span class="warning">⚠️ Nie znaleziono informacji o wybranym modelu</span>
+            `;
+        }
+    }
+}
+// Dodaj funkcje obsługujące przełączanie trybu konfiguracji
+function switchToAutoConfig(nastawniaId) {
+    // Usuń zapisaną ręczną konfigurację
+    if (typeof clearManualDiskConfiguration === 'function') {
+        const recorderSelect = document.getElementById(`recorder_model_${nastawniaId}`);
+        const selectedModel = recorderSelect.value;
+        clearManualDiskConfiguration(nastawniaId, selectedModel);
+    }
+    
+    // Odśwież interfejs
+    updateRecorderInfo(nastawniaId);
+    updateNastawniaEquipment(nastawniaId);
+}
+
+function switchToManualConfig(nastawniaId) {
+    const recorderSelect = document.getElementById(`recorder_model_${nastawniaId}`);
+    const selectedModel = recorderSelect.value;
+    const recorderInfo = getRecorderInfo(selectedModel);
+    
+    if (recorderInfo) {
+        // Oblicz automatyczną konfigurację jako punkt startowy
+        const recordingDays = parseInt(document.getElementById(`recording_days_${nastawniaId}`)?.value) || 7;
+        const cameraCount = countSKPAndKATACameras(nastawniaId);
+        const requiredStorage = calculateRequiredStorage(cameraCount, recordingDays);
+        const diskConfig = calculateOptimalDiskConfiguration(recorderInfo, requiredStorage);
+        
+        // Zapisz jako ręczną konfigurację
+        if (typeof saveManualDiskConfiguration === 'function') {
+            saveManualDiskConfiguration(nastawniaId, selectedModel, diskConfig.disksConfiguration);
+        }
+    }
+    
+    // Odśwież interfejs
+    updateRecorderInfo(nastawniaId);
+}
+
+function updateManualDiskConfig(nastawniaId) {
+    const recorderSelect = document.getElementById(`recorder_model_${nastawniaId}`);
+    const selectedModel = recorderSelect.value;
+    const recorderInfo = getRecorderInfo(selectedModel);
+    
+    if (!recorderInfo) return;
+    
+    // Pobierz aktualną konfigurację z UI
+    const configuration = [];
+    let totalStorage = 0;
+    
+    for (let i = 0; i < recorderInfo.diskSlots; i++) {
+        const selectElement = document.getElementById(`diskSlot_${nastawniaId}_${i}`);
+        if (selectElement) {
+            const diskSize = parseInt(selectElement.value) || 0;
+            configuration[i] = diskSize;
+            totalStorage += diskSize;
+        }
+    }
+    
+    // Aktualizuj wyświetlaną pojemność
+    const currentStorageSpan = document.getElementById(`currentStorage_${nastawniaId}`);
+    if (currentStorageSpan) {
+        currentStorageSpan.textContent = `${totalStorage} TB`;
+    }
+    
+    // Aktualizuj status
+    const recordingDays = parseInt(document.getElementById(`recording_days_${nastawniaId}`)?.value) || 7;
+    const cameraCount = countSKPAndKATACameras(nastawniaId);
+    const requiredStorage = calculateRequiredStorage(cameraCount, recordingDays);
+    
+    const statusElement = document.getElementById(`storageStatus_${nastawniaId}`);
+    if (statusElement) {
+        if (totalStorage >= requiredStorage) {
+            statusElement.innerHTML = '<span class="status-ok">✅ Wystarczająca pojemność</span>';
+        } else {
+            statusElement.innerHTML = '<span class="status-warning">⚠️ Niewystarczająca pojemność</span>';
+        }
+    }
+    
+    // Zapisz konfigurację
+    if (typeof saveManualDiskConfiguration === 'function') {
+        saveManualDiskConfiguration(nastawniaId, selectedModel, configuration);
+    }
+    
+    // Aktualizuj wyposażenie
+    updateNastawniaEquipment(nastawniaId);
+}
+/**
+ * Aktualizuje informację o wymaganej przestrzeni dyskowej dla kamer
+ * @param {number} nastawniaId - ID nastawni
+ */
+function updateStorageInfo(nastawniaId) {
+    const storageInfoDiv = document.getElementById(`storage_info_${nastawniaId}`);
+    if (!storageInfoDiv) return;
+    
+    // Pobierz liczbę dni zapisu
+    const recordingDaysSelect = document.getElementById(`recording_days_${nastawniaId}`);
+    const recordingDays = parseInt(recordingDaysSelect.value) || 7;
+    
+    // Oblicz całkowitą liczbę kamer we wszystkich podłączonych obiektach
+    const totalCameras = countAllConnectedCameras(nastawniaId);
+    
+    // Wzór: (X*4)*(Y*0.0108) TB, gdzie X to liczba kamer, Y to liczba dni
+    const requiredStorage = (totalCameras * 4) * (recordingDays * 0.0108);
+    const formattedStorage = requiredStorage.toFixed(2);
+    
+    // Zaktualizuj informację
+    const infoMessageDiv = storageInfoDiv.querySelector('.info-message');
+    if (infoMessageDiv) {
+        infoMessageDiv.innerHTML = `
+            Wymagana pojemność zapisu dla <strong>${totalCameras} kamer</strong> na <strong>${recordingDays} dni</strong>: 
+            <strong>${formattedStorage} TB</strong>
+        `;
+    }
+}
+
+/**
+ * Liczy wszystkie kamery w podłączonych obiektach
+ * @param {number} nastawniaId - ID nastawni
+ * @returns {number} Suma wszystkich kamer
+ */
+function countAllConnectedCameras(nastawniaId) {
+    const connectedObjects = document.querySelectorAll(`#connectedObjects_${nastawniaId} input[type="checkbox"]:checked`);
+    let totalCameras = 0;
+    
+    for (const checkbox of connectedObjects) {
+        const objId = checkbox.value;
+        // Pomiń nastawnie
+        if (objId.includes('nastawnia_')) continue;
+        
+        const objectElement = document.getElementById(`object_${objId}`);
+        if (!objectElement) continue;
+        
+        // Sprawdź typ obiektu
+        const skpRadio = objectElement.querySelector('input[id^="skp_"]:checked');
+        const katARadio = objectElement.querySelector('input[id^="KATa_"]:checked');
+        const katBRadio = objectElement.querySelector('input[id^="KATB_"]:checked');
+        
+        if (skpRadio || katARadio || katBRadio) {
+            // Znajdź wszystkie kamery w obiekcie
+            let tableSelector = '';
+            
+            if (skpRadio) tableSelector = '.skp-results tbody';
+            else if (katARadio) tableSelector = '.KATa-results tbody';
+            else if (katBRadio) tableSelector = '.KATB-results tbody';
+            
+            if (tableSelector) {
+                // Szukamy wszystkich wierszy z kamerami (Kamera-0 i Kamera-1)
+                const rows = objectElement.querySelectorAll(`${tableSelector} tr`);
+                rows.forEach(row => {
+                    const nameCell = row.querySelector('td:nth-child(2)');
+                    if (nameCell && (
+                        nameCell.textContent.includes('Kamera') || 
+                        nameCell.textContent.includes('Kamra')
+                    )) {
+                        const qtyCell = row.querySelector('td:nth-child(3)');
+                        if (qtyCell) {
+                            const qtyInput = qtyCell.querySelector('input');
+                            const qty = qtyInput ? parseInt(qtyInput.value) || 0 : parseInt(qtyCell.textContent.trim()) || 0;
+                            totalCameras += qty;
+                        }
+                    }
+                });
+            }
+        }
+    }
+    
+    return totalCameras;
+}
+
+/**
+ * Sprawdza, czy do nastawni są podłączone obiekty typu KAT A
+ * @param {number} nastawniaId - ID nastawni
+ * @returns {boolean} Czy są podłączone obiekty KAT A
+ */
+function checkForConnectedKatAObjects(nastawniaId) {
+    const connectedObjects = document.querySelectorAll(`#connectedObjects_${nastawniaId} input[type="checkbox"]:checked`);
+    
+    for (const checkbox of connectedObjects) {
+        const objId = checkbox.value;
+        // Pomiń nastawnie
+        if (objId.includes('nastawnia_')) continue;
+        
+        const objectElement = document.getElementById(`object_${objId}`);
+        if (!objectElement) continue;
+        
+        const katARadio = objectElement.querySelector('input[id^="KATa_"]:checked');
+        if (katARadio) return true;
+    }
+    
+    return false;
+}
+
+/**
+ * Liczy kamery WV-u1532 w podłączonych obiektach
+ * @param {number} nastawniaId - ID nastawni
+ * @returns {number} Liczba kamer
+ */
+function countConnectedCameras(nastawniaId) {
+    const connectedObjects = document.querySelectorAll(`#connectedObjects_${nastawniaId} input[type="checkbox"]:checked`);
+    let cameraCount = 0;
+    
+    for (const checkbox of connectedObjects) {
+        const objId = checkbox.value;
+        // Pomiń nastawnie
+        if (objId.includes('nastawnia_')) continue;
+        
+        const objectElement = document.getElementById(`object_${objId}`);
+        if (!objectElement) continue;
+        
+        // Sprawdź typ obiektu
+        const skpRadio = objectElement.querySelector('input[id^="skp_"]:checked');
+        const katARadio = objectElement.querySelector('input[id^="KATa_"]:checked');
+        const katBRadio = objectElement.querySelector('input[id^="KATB_"]:checked');
+        
+        if (skpRadio || katARadio || katBRadio) {
+            // Znajdź pole z kamerami (różne tabele w zależności od typu obiektu)
+            let tableSelector = '';
+            
+            if (skpRadio) tableSelector = '.skp-results tbody';
+            else if (katARadio) tableSelector = '.KATa-results tbody';
+            else if (katBRadio) tableSelector = '.KATB-results tbody';
+            
+            if (tableSelector) {
+                // Szukamy kamer zawierających u1532l w nazwie
+                const rows = objectElement.querySelectorAll(`${tableSelector} tr`);
+                rows.forEach(row => {
+                    const nameCell = row.querySelector('td:nth-child(2)');
+                    if (nameCell && nameCell.textContent.toLowerCase().includes('u1532l')) {
+                        const qtyCell = row.querySelector('td:nth-child(3)');
+                        if (qtyCell) {
+                            const qtyInput = qtyCell.querySelector('input');
+                            const qty = qtyInput ? parseInt(qtyInput.value) || 0 : parseInt(qtyCell.textContent.trim()) || 0;
+                            cameraCount += qty;
+                        }
+                    }
+                });
+            }
+        }
+    }
+    
+    return cameraCount;
+}
+
+/**
+ * Liczy liczbę urządzeń "AUD.IP-AMP10.LD1040" w podłączonych obiektach
+ * @param {number} nastawniaId - ID nastawni
+ * @returns {number} Liczba urządzeń AUD.IP-AMP10.LD1040
+ */
+function countConnectedAudioDevices(nastawniaId) {
+    const connectedObjects = document.querySelectorAll(`#connectedObjects_${nastawniaId} input[type="checkbox"]:checked`);
+    let audioDevicesCount = 0;
+    
+    for (const checkbox of connectedObjects) {
+        const objId = checkbox.value;
+        // Pomiń nastawnie
+        if (objId.includes('nastawnia_')) continue;
+        
+        const objectElement = document.getElementById(`object_${objId}`);
+        if (!objectElement) continue;
+        
+        // Sprawdź czy jest to obiekt KAT A (tylko tam występują urządzenia audio)
+        const katARadio = objectElement.querySelector('input[id^="KATa_"]:checked');
+        
+        if (katARadio) {
+            const tableSelector = '.KATa-results tbody';
+            // Szukamy urządzeń "SLICAN Kolumna głośnikowa AUD.IP-AMP10.LD1040"
+            const rows = objectElement.querySelectorAll(`${tableSelector} tr`);
+            rows.forEach(row => {
+                const nameCell = row.querySelector('td:nth-child(2)');
+                if (nameCell && nameCell.textContent.includes('AUD.IP-AMP10.LD1040')) {
+                    const qtyCell = row.querySelector('td:nth-child(3)');
+                    if (qtyCell) {
+                        const qtyInput = qtyCell.querySelector('input');
+                        const qty = qtyInput ? parseInt(qtyInput.value) || 0 : parseInt(qtyCell.textContent.trim()) || 0;
+                        audioDevicesCount += qty;
+                    }
+                }
+            });
+        }
+    }
+    
+    return audioDevicesCount;
+}
+
+/**
+ * Liczy wszystkie urządzenia z typem Audio w połączonych obiektach i nastawni
+ * @param {number} nastawniaId - ID nastawni
+ * @param {Array} equipmentList - Lista wyposażenia nastawni
+ * @returns {number} Suma urządzeń Audio
+ */
+function countTotalAudioDevices(nastawniaId, equipmentList) {
+    // Liczba urządzeń Audio w nastawni
+    let totalAudioCount = 0;
+    
+    // Dodaj urządzenia z typu "Audio" z nastawni
+    if (equipmentList) {
+        equipmentList.forEach(item => {
+            if (item.typ === 'Audio') {
+                totalAudioCount += item.ilosc;
+            }
+        });
+    }
+    
+    // Dodaj urządzenia Audio z podłączonych obiektów
+    const connectedObjects = document.querySelectorAll(`#connectedObjects_${nastawniaId} input[type="checkbox"]:checked`);
+    
+    for (const checkbox of connectedObjects) {
+        const objId = checkbox.value;
+        // Pomiń nastawnie
+        if (objId.includes('nastawnia_')) continue;
+        
+        const objectElement = document.getElementById(`object_${objId}`);
+        if (!objectElement) continue;
+        
+        // Sprawdź typ obiektu
+        const katARadio = objectElement.querySelector('input[id^="KATa_"]:checked');
+        
+        if (katARadio) {
+            const tableSelector = '.KATa-results tbody';
+            // Szukamy urządzeń z typem Audio
+            const rows = objectElement.querySelectorAll(`${tableSelector} tr`);
+            rows.forEach(row => {
+                const nameCell = row.querySelector('td:nth-child(2)');
+                if (nameCell) {
+                    const name = nameCell.textContent;
+                    // Sprawdź czy to urządzenie audio (szukamy w KATa_DATA po nazwie)
+                    const audioItem = KATa_DATA.find(item => item.nazwa === name && item.typ === 'Audio');
+                    if (audioItem) {
+                        const qtyCell = row.querySelector('td:nth-child(3)');
+                        if (qtyCell) {
+                            const qtyInput = qtyCell.querySelector('input');
+                            const qty = qtyInput ? parseInt(qtyInput.value) || 0 : parseInt(qtyCell.textContent.trim()) || 0;
+                            totalAudioCount += qty;
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    return totalAudioCount;
+}
+
+/**
+ * Liczy urządzenia CTS220-ip w połączonych obiektach i nastawni
+ * @param {number} nastawniaId - ID nastawni
+ * @param {Array} equipmentList - Lista wyposażenia nastawni
+ * @returns {number} Liczba urządzeń CTS220-ip
+ */
+function countTotalCTS220Devices(nastawniaId, equipmentList) {
+    let totalCTSCount = 0;
+    
+    // Sprawdź urządzenia z nastawni
+    if (equipmentList) {
+        equipmentList.forEach(item => {
+            if (item.nazwa === 'Telefon systemowy CTS220-ip') {
+                totalCTSCount += item.ilosc;
+            }
+        });
+    }
+    
+    // Sprawdź urządzenia w podłączonych obiektach
+    const connectedObjects = document.querySelectorAll(`#connectedObjects_${nastawniaId} input[type="checkbox"]:checked`);
+    
+    for (const checkbox of connectedObjects) {
+        const objId = checkbox.value;
+        // Pomiń nastawnie
+        if (objId.includes('nastawnia_')) continue;
+        
+        const objectElement = document.getElementById(`object_${objId}`);
+        if (!objectElement) continue;
+        
+        // Sprawdź typ obiektu - CTS220 występuje tylko w KAT A
+        const katARadio = objectElement.querySelector('input[id^="KATa_"]:checked');
+        
+        if (katARadio) {
+            const tableSelector = '.KATa-results tbody';
+            const rows = objectElement.querySelectorAll(`${tableSelector} tr`);
+            
+            rows.forEach(row => {
+                const nameCell = row.querySelector('td:nth-child(2)');
+                if (nameCell && nameCell.textContent === 'Telefon systemowy CTS220-ip') {
+                    const qtyCell = row.querySelector('td:nth-child(3)');
+                    if (qtyCell) {
+                        const qtyInput = qtyCell.querySelector('input');
+                        const qty = qtyInput ? parseInt(qtyInput.value) || 0 : parseInt(qtyCell.textContent.trim()) || 0;
+                        totalCTSCount += qty;
+                    }
+                }
+            });
+        }
+    }
+    
+    return totalCTSCount;
+}
+
+/**
+ * Znajduje obiekt KAT A z największą liczbą urządzeń AUD.IP-AMP10.LD1040
+ * @param {number} nastawniaId - ID nastawni
+ * @returns {number} Maksymalna liczba urządzeń AUD.IP-AMP10.LD1040 w pojedynczym obiekcie
+ */
+function findMaxAudioDevicesInSingleObject(nastawniaId) {
+    const connectedObjects = document.querySelectorAll(`#connectedObjects_${nastawniaId} input[type="checkbox"]:checked`);
+    let maxAudioDevices = 0;
+    
+    // Sprawdź każdy podłączony obiekt
+    for (const checkbox of connectedObjects) {
+        const objId = checkbox.value;
+        // Pomiń nastawnie
+        if (objId.includes('nastawnia_')) continue;
+        
+        const objectElement = document.getElementById(`object_${objId}`);
+        if (!objectElement) continue;
+        
+        // Sprawdź czy jest to obiekt KAT A (tylko tam występują urządzenia audio)
+        const katARadio = objectElement.querySelector('input[id^="KATa_"]:checked');
+        
+        if (katARadio) {
+            // Licz urządzenia audio w tym konkretnym obiekcie
+            let audioDevicesInThisObject = 0;
+            
+            const tableSelector = '.KATa-results tbody';
+            const rows = objectElement.querySelectorAll(`${tableSelector} tr`);
+            rows.forEach(row => {
+                const nameCell = row.querySelector('td:nth-child(2)');
+                if (nameCell && nameCell.textContent.includes('AUD.IP-AMP10.LD1040')) {
+                    const qtyCell = row.querySelector('td:nth-child(3)');
+                    if (qtyCell) {
+                        const qtyInput = qtyCell.querySelector('input');
+                        const qty = qtyInput ? parseInt(qtyInput.value) || 0 : parseInt(qtyCell.textContent.trim()) || 0;
+                        audioDevicesInThisObject += qty;
+                    }
+                }
+            });
+            
+            // Aktualizuj maksimum, jeśli znaleziono większą wartość
+            if (audioDevicesInThisObject > maxAudioDevices) {
+                maxAudioDevices = audioDevicesInThisObject;
+            }
+        }
+    }
+    
+    return maxAudioDevices;
+}
+
+/**
+ * Liczy łączną liczbę CTS220-ip i AUD.IP-AMP10.LD1040 w podłączonych obiektach i nastawni
+ * @param {number} nastawniaId - ID nastawni
+ * @param {Array} equipmentList - Lista wyposażenia nastawni
+ * @returns {number} Suma urządzeń CTS220-ip i AUD.IP-AMP10.LD1040
+ */
+function countCTSAndAudioDevices(nastawniaId, equipmentList) {
+    let totalDevices = 0;
+    
+    // Sprawdź urządzenia w nastawni
+    if (equipmentList) {
+        equipmentList.forEach(item => {
+            if (item.nazwa === 'Telefon systemowy CTS220-ip') {
+                totalDevices += item.ilosc;
+            }
+        });
+    }
+    
+    // Sprawdź urządzenia w podłączonych obiektach
+    const connectedObjects = document.querySelectorAll(`#connectedObjects_${nastawniaId} input[type="checkbox"]:checked`);
+    
+    for (const checkbox of connectedObjects) {
+        const objId = checkbox.value;
+        // Pomiń nastawnie
+        if (objId.includes('nastawnia_')) continue;
+        
+        const objectElement = document.getElementById(`object_${objId}`);
+        if (!objectElement) continue;
+        
+        // Sprawdź typ obiektu - CTS220 i AUD.IP-AMP10 występują tylko w KAT A
+        const katARadio = objectElement.querySelector('input[id^="KATa_"]:checked');
+        
+        if (katARadio) {
+            const tableSelector = '.KATa-results tbody';
+            const rows = objectElement.querySelectorAll(`${tableSelector} tr`);
+            
+            rows.forEach(row => {
+                const nameCell = row.querySelector('td:nth-child(2)');
+                if (nameCell && 
+                   (nameCell.textContent === 'Telefon systemowy CTS220-ip' || 
+                    nameCell.textContent.includes('AUD.IP-AMP10.LD1040'))) {
+                    
+                    const qtyCell = row.querySelector('td:nth-child(3)');
+                    if (qtyCell) {
+                        const qtyInput = qtyCell.querySelector('input');
+                        const qty = qtyInput ? parseInt(qtyInput.value) || 0 : parseInt(qtyCell.textContent.trim()) || 0;
+                        totalDevices += qty;
+                    }
+                }
+            });
+        }
+    }
+    
+    return totalDevices;
+}
+
+/**
+ * Sprawdza czy nastawnia jest podłączona do nastawni z LCS
+ * @param {number} nastawniaId - ID nastawni
+ * @returns {boolean} Czy nastawnia jest podłączona do nastawni z LCS
+ */
+function isNastawiaConnectedToLCS(nastawniaId) {
+    const nastawnie = document.querySelectorAll('.nastawnia-item');
+    
+    for (const nastawnia of nastawnie) {
+        const id = nastawnia.id.split('_')[1];
+        const lcsCheckbox = document.getElementById(`lcs_${id}`);
+        
+        // Jeśli to nastawnia z LCS
+        if (lcsCheckbox && lcsCheckbox.checked) {
+            // Sprawdź czy nasza nastawnia jest do niej podłączona
+            const connectedObjects = document.querySelectorAll(`#connectedObjects_${id} input[type="checkbox"]:checked`);
+            for (const checkbox of connectedObjects) {
+                if (checkbox.value === `nastawnia_${nastawniaId}`) {
+                    return true;
+                }
+            }
+        }
+    }
+    
+    return false;
+}
+
+/**
+ * Generuje wyposażenie nastawni na podstawie ustawień kreatora
+ * @param {number} objectId - ID nastawni
+ * @param {HTMLElement} tableBody - Element tbody tabeli
+ */
+function generateNastawniaEquipment(objectId, tableBody) {
+    // Pobierz wartości z kreatora
+    const monitorsCount = parseInt(document.getElementById(`monitors_count_${objectId}`).value) || 0;
+    const monitorSize = document.getElementById(`monitor_size_${objectId}`).value || '23.8';
+    const rackSize = document.getElementById(`rack_size_${objectId}`).value || '42U';
+    const computerType = document.getElementById(`computer_type_${objectId}`).value || 'MINI PC';
+    
+    // Pobierz opcje dotyczące monitorów na PC
+    let monitorsPerPc = 4; // domyślnie 4 monitory na PC
+    if (computerType === 'PC') {
+        const monitorsPerPcSelect = document.getElementById(`monitors_per_pc_${objectId}`);
+        if (monitorsPerPcSelect) {
+            const selectedValue = monitorsPerPcSelect.value;
+            if (selectedValue !== 'special') {
+                monitorsPerPc = parseInt(selectedValue);
+            }
+        }
+    }
+    
+    // Oblicz liczbę komputerów
+    let computerCount = 0;
+    if (computerType === 'MINI PC') {
+        computerCount = Math.ceil(monitorsCount / 2); // Połowa liczby monitorów (zaokrąglone w górę)
+    } else { // PC
+        computerCount = Math.ceil(monitorsCount / monitorsPerPc); // Liczba monitorów podzielona przez monitory na PC
+    }
+    
+    // Sprawdź zaznaczone opcje
+    const lprCheckbox = document.getElementById(`lpr_${objectId}`);
+    const redLightCheckbox = document.getElementById(`redLight_${objectId}`);
+    const lcsCheckbox = document.getElementById(`lcs_${objectId}`);
+    
+    const isLprEnabled = lprCheckbox && lprCheckbox.checked;
+    const isRedLightEnabled = redLightCheckbox && redLightCheckbox.checked;
+    const isLcsEnabled = lcsCheckbox && lcsCheckbox.checked;
+    
+    // Sprawdź, czy połączone są obiekty KAT A
+    const hasKatAObjects = checkForConnectedKatAObjects(objectId);
+    
+    // Licz kamery WV-u1532 dla podłączonych obiektów
+    const connectedCamerasCount = countConnectedCameras(objectId);
+    
+    // Licz urządzenia AUD.IP-AMP10.LD1040 dla podłączonych obiektów
+    const connectedAudioDevicesCount = countConnectedAudioDevices(objectId);
+    
+    console.log(`Nastawnia ${objectId} - Kamery: ${connectedCamerasCount}, Audio: ${connectedAudioDevicesCount}, LPR: ${isLprEnabled}, RedLight: ${isRedLightEnabled}`);
+    
+    // Aktualizuj informację o wymaganej przestrzeni dyskowej
+    updateStorageInfo(objectId);
+    
+    // Przygotuj nowy zestaw wyposażenia
+    const equipmentList = [];
+    
+    // Dodaj monitory
+    if (monitorsCount > 0) {
+        equipmentList.push({
+            nazwa: `Monitor ${monitorSize}″`,
+            ilosc: monitorsCount,
+            klasa: 'Klasa-0',
+            typ: 'akcesoria'
+        });
+    }
+    
+    // Dodaj komputery
+    if (computerCount > 0) {
+        // Dodaj informację o liczbie wyjść monitorowych dla PC
+        let computerName = computerType;
+        if (computerType === 'PC') {
+            computerName = `PC z ${monitorsPerPc} wyjść monitorowych`;
+        }
+        
+        equipmentList.push({
+            nazwa: `${computerName} z klawiaturą`,
+            ilosc: computerCount,
+            klasa: 'Lanz1',
+            typ: 'komputer'
+        });
+        
+        // Dodaj komputer serwer jeśli:
+        // - Mini PC > 1, lub
+        // - PC > 1, lub
+        // - Klucz USB SSV/CSV ma wartość > 8
+        const shouldAddServer = 
+            (computerType === 'MINI PC' && computerCount > 1) || 
+            (computerType === 'PC' && computerCount > 1) ||
+            (!isLprEnabled && !isRedLightEnabled && connectedCamerasCount > 8);
+        
+        if (shouldAddServer) {
+            console.log(`Dodaję serwer: PC > 1: ${computerType === 'PC' && computerCount > 1}, 
+                         MiniPC > 1: ${computerType === 'MINI PC' && computerCount > 1}, 
+                         Kamery > 8: ${!isLprEnabled && !isRedLightEnabled && connectedCamerasCount > 8}`);
+            
+            equipmentList.push({
+                nazwa: 'Komputer Serwer',
+                ilosc: 1,
+                klasa: 'Lanz1',
+                typ: 'serwer'
+            });
+        }
+    }
+    
+    // Dodaj szafę rack
+    equipmentList.push({
+        nazwa: `Szafa rack ${rackSize}`,
+        ilosc: 1,
+        klasa: 'brak',
+        typ: 'akcesoria'
+    });
+    
+    // Dodaj standardowe wyposażenie
+    NASTAWNIA_DATA.forEach(item => {
+        // Pomiń elementy już dodane (monitor i szafa rack)
+        if (item.typ === 'monitor' || item.nazwa.includes('rack')) {
+            return;
+        }
+	/**
+	 * Dostępne pojemności dysków dla poszczególnych rejestratorów
+	 */
+	const DISK_CAPACITIES = {
+		'WJ-NU101': [6, 8, 10, 12, 14, 18, 24],
+		'WJ-NU300': [6, 8, 10, 12, 14, 18, 24],
+		'WJ-NU301': [6, 8, 10, 12, 14, 18, 24],
+		'WJ-NX310': [6, 8, 10, 12, 14, 18],
+		'WJ-NX410': [6, 8, 10, 12, 14, 18, 24],
+		'WJ-NX510': [6, 8, 10, 12, 14, 18, 24],
+		'default': [6, 8, 10, 12, 14, 18, 24]
+	};        
+        // Sprawdź, czy element powinien być wyświetlony w zależności od opcji
+        let shouldDisplay = true;
+        
+        if (item.zaleznosc === "LPR" && !isLprEnabled) {
+            shouldDisplay = false;
+        } else if (item.zaleznosc === "RedLight" && !isRedLightEnabled) {
+            shouldDisplay = false;
+        } else if (item.zaleznosc === "LCS" && !isLcsEnabled) {
+            shouldDisplay = false;
+        } else if (item.nazwa.includes("Klawiatura")) {
+            shouldDisplay = false; // Pomiń klawiaturę, bo jest już dodana z komputerem
+        }
+        
+        if (shouldDisplay) {
+            equipmentList.push({
+                nazwa: item.nazwa,
+                ilosc: item.zaleznosc && /^\d+$/.test(item.zaleznosc) ? parseInt(item.zaleznosc) : 1,
+                klasa: item.klasa || 'brak',
+                typ: item.typ
+            });
+        }
+    });
+    
+    // Dodaj telefon systemowy dla obiektów KAT A z odpowiednimi parametrami
+    if (hasKatAObjects) {
+        equipmentList.push({
+            nazwa: 'Telefon systemowy CTS220-ip',
+            ilosc: 1,
+            klasa: 'Lanz1',
+            typ: 'Audio'
+        });
+    }
+    
+    // Dodaj centralę slican w zależności od liczby urządzeń AUD.IP-AMP10.LD1040
+    // oraz uwzględniając ograniczenia na maksymalną liczbę urządzeń audio
+    let centralName = '';
+    let hasCentral = false;
+    
+    // Najpierw obliczamy sumę wszystkich urządzeń Audio
+    const totalAudioDevices = countTotalAudioDevices(objectId, equipmentList);
+    console.log(`Suma urządzeń Audio: ${totalAudioDevices}`);
+    
+    // Określ model centrali na podstawie liczby urządzeń AUD.IP-AMP10.LD1040 i limitu urządzeń Audio
+    if (connectedAudioDevicesCount <= 10 && totalAudioDevices < 300) {
+        centralName = 'Centrale slican NCP300';
+        if (connectedAudioDevicesCount > 0) hasCentral = true;
+    } else if (connectedAudioDevicesCount <= 50 && totalAudioDevices < 1000) {
+        centralName = 'Centrale slican NCP400';
+        hasCentral = true;
+    } else if (connectedAudioDevicesCount > 0 || totalAudioDevices > 0) {
+        // Dla większych instalacji lub gdy przekroczono limity NCP300/NCP400
+        centralName = 'Centrale slican NCP600';
+        hasCentral = true;
+    }
+    
+    // Dodaj centralę tylko jeśli jest przynajmniej jedno urządzenie audio
+    if (hasCentral) {
+        equipmentList.push({
+            nazwa: centralName,
+            ilosc: 1,
+            klasa: 'Lanz',
+            typ: 'centrala'
+        });
+        
+        // Licencje dla centrali
+        
+        // 1. Licencja bazowa
+        equipmentList.push({
+            nazwa: 'Licencja Bazowa',
+            ilosc: 1,
+            klasa: 'Klasa-0',
+            typ: 'licencja'
+        });
+        
+        // 2. Licencja IVR
+        equipmentList.push({
+            nazwa: 'licencje IVR',
+            ilosc: 1,
+            klasa: 'Klasa-0',
+            typ: 'licencja'
+        });
+        
+        // 3. Licencje VoIP
+        if (totalAudioDevices > 0) {
+            // Logika licencji VoIP
+            if (totalAudioDevices >= 89) {
+                // Dla sumy >= 89 zawsze jedna licencja VoIP 100
+                equipmentList.push({
+                    nazwa: 'Licencja Voip user 100',
+                    ilosc: 1,
+                    klasa: 'Klasa-0',
+                    typ: 'licencja'
+                });
+            } else {
+                // Podziel przez 10, aby uzyskać liczbę licencji VoIP 10
+                const voip10Count = Math.floor(totalAudioDevices / 10);
+                const remainder = totalAudioDevices % 10;
+                
+                if (voip10Count > 0) {
+                    equipmentList.push({
+                        nazwa: 'Licencja Voip user 10',
+                        ilosc: voip10Count,
+                        klasa: 'Klasa-0',
+                        typ: 'licencja'
+                    });
+                }
+                
+                // Dodaj licencje VoIP 1 na podstawie reszty
+                if (remainder > 0 && remainder <= 8) {
+                    equipmentList.push({
+                        nazwa: 'Licencja Voip user 1',
+                        ilosc: remainder,
+                        klasa: 'Klasa-0',
+                        typ: 'licencja'
+                    });
+                } else if (remainder == 9) {
+                    // Dla reszty 9, dodajemy jeszcze jedną licencję VoIP 10
+                    equipmentList.push({
+                        nazwa: 'Licencja Voip user 10',
+                        ilosc: 1,
+                        klasa: 'Klasa-0',
+                        typ: 'licencja'
+                    });
+                }
+            }
+        }
+        
+        // 4. Licencje nagrywania - na podstawie liczby CTS220-ip
+        const totalCTSDevices = countTotalCTS220Devices(objectId, equipmentList);
+        if (totalCTSDevices > 0) {
+            equipmentList.push({
+                nazwa: 'Licencja nagrywanie',
+                ilosc: totalCTSDevices,
+                klasa: 'Klasa-0',
+                typ: 'licencja'
+            });
+        }
+        
+        // 5. Licencje konferencji - na podstawie CTS220-ip i maksymalnej liczby AUD.IP-AMP10.LD1040 w pojedynczym obiekcie
+        const isLcs = document.getElementById(`lcs_${objectId}`)?.checked;
+        const connectedToLcs = isNastawiaConnectedToLCS(objectId);
+
+        // Tylko dla nastawni z LCS lub nastawni bez LCS niepodłączonej do LCS
+        if (isLcs || !connectedToLcs) {
+            // Policz urządzenia CTS220-ip
+            const totalCTSDevices = countTotalCTS220Devices(objectId, equipmentList);
+            
+            // Znajdź obiekt z największą liczbą AUD.IP-AMP10.LD1040
+            const maxAudioInSingleObject = findMaxAudioDevicesInSingleObject(objectId);
+            
+            console.log(`Nastawnia ${objectId}: CTS220 = ${totalCTSDevices}, Max AUD.IP-AMP10 = ${maxAudioInSingleObject}`);
+            
+            // Oblicz całkowitą liczbę miejsc
+            const totalConferenceSlots = totalCTSDevices + maxAudioInSingleObject;
+            
+            if (totalConferenceSlots > 0) {
+                // Licencje konferencja 15
+                const license15Count = Math.floor(totalConferenceSlots / 15);
+                const remainingSlots = totalConferenceSlots % 15;
+                
+                console.log(`Całkowita liczba miejsc konferencyjnych: ${totalConferenceSlots}`);
+                console.log(`Licencje 15: ${license15Count}, Pozostałe miejsca: ${remainingSlots}`);
+                
+                if (license15Count > 0) {
+                    equipmentList.push({
+                        nazwa: 'Licencja konferencja 15',
+                        ilosc: license15Count,
+                        klasa: 'Klasa-0',
+                        typ: 'licencja'
+                    });
+                }
+                
+                // Licencje na pozostałe miejsca
+                if (remainingSlots > 0) {
+                    if (remainingSlots <= 5) {
+                        equipmentList.push({
+                            nazwa: 'Licencja konferencja 5',
+                            ilosc: 1,
+                            klasa: 'Klasa-0',
+                            typ: 'licencja'
+                        });
+                    } else if (remainingSlots <= 10) {
+                        equipmentList.push({
+                            nazwa: 'Licencja konferencja 5',
+                            ilosc: 2,
+                            klasa: 'Klasa-0',
+                            typ: 'licencja'
+                        });
+                    } else {
+                        equipmentList.push({
+                            nazwa: 'Licencja konferencja 15',
+                            ilosc: 1,
+                            klasa: 'Klasa-0',
+                            typ: 'licencja'
+                        });
+                    }
+                }
+            }
+        }
+    }
+    
+    // Dodaj klucz USB SSV/CSV jeśli potrzebny
+    if (!isLprEnabled && !isRedLightEnabled) {
+        console.log(`Sprawdzam warunki dla klucza USB: Kamery=${connectedCamerasCount}, !LPR=${!isLprEnabled}, !RedLight=${!isRedLightEnabled}`);
+        
+        if (connectedCamerasCount <= 4 && connectedCamerasCount > 0) {
+            console.log(`Dodaję Klucz USB SSV/CSV 4 (kamery <= 4): ${connectedCamerasCount}`);
+            equipmentList.push({
+                nazwa: 'Klucz USB SSV/CSV 4',
+                ilosc: 1,
+                klasa: 'brak',
+                typ: 'klucz'
+            });
+        } else if (connectedCamerasCount > 4) {
+            console.log(`Dodaję Klucz USB SSV/CSV (${connectedCamerasCount}) (kamery > 4)`);
+            equipmentList.push({
+                nazwa: `Klucz USB SSV/CSV (${connectedCamerasCount})`,
+                ilosc: 1,
+                klasa: 'brak',
+                typ: 'klucz'
+            });
+        }
+    }
+    
+    // Policz urządzenia sieciowe bezpośrednio w liście
+    let networkDeviceCount = 0;
+    equipmentList.forEach(item => {
+        if ((item.klasa === 'Lan' || item.klasa === 'Lanz' || item.klasa === 'Lanz1') && 
+            !item.nazwa.includes('Switch')) {
+            networkDeviceCount += item.ilosc;
+        }
+    });
+
+    console.log(`Łączna liczba urządzeń sieciowych w nastawni ${objectId}: ${networkDeviceCount}`);
+
+    // Dodaj odpowiedni switch i zasilacz na podstawie liczby urządzeń
+    if (networkDeviceCount > 8) {
+        console.log(`Dodaję duży switch CRS328-24p-4s dla ${networkDeviceCount} urządzeń`);
+        equipmentList.push({
+            nazwa: 'CRS328-24p-4s',
+            ilosc: 1,
+            klasa: 'LAN0',
+            typ: 'switch'
+        });
+    } else {
+        console.log(`Dodaję mały switch CRS112-8p-4S dla ${networkDeviceCount} urządzeń`);
+        equipmentList.push({
+            nazwa: 'CRS112-8p-4S',
+            ilosc: 1,
+            klasa: 'LAN0',
+            typ: 'switch'
+        });
+    }
+    
+	   // Sprawdź, czy na liście jest switch CRS112-8p-4S i dodaj zasilacz jeśli potrzeba
+	const hasCRS112 = equipmentList.some(item => item.nazwa === 'CRS112-8p-4S');
+	const hasPowerSupply = equipmentList.some(item => item.nazwa === 'Zasilacz Meanwell NDR-240-48');
+
+	// Jeśli mamy CRS112-8p-4S i nie mamy jeszcze zasilacza, dodaj go
+	if (hasCRS112 && !hasPowerSupply) {
+		console.log('Dodaję zasilacz Meanwell NDR-240-48 dla switcha CRS112-8p-4S');
+		equipmentList.push({
+			nazwa: 'Zasilacz Meanwell NDR-240-48',
+			ilosc: 1,
+			klasa: 'Klasa-0',
+			typ: 'zasilacz'
+		});
+	}
+
+	// Dodaj przewody i przejściówki w zależności od typu komputera
+		if (computerType === 'MINI PC') {
+		// Dla MINI PC dodaj przejściówki DP-HDMI i przewody HDMI 3m w ilości równej liczbie monitorów
+		equipmentList.push({
+			nazwa: 'Przejściówka DP-HDMI',
+			ilosc: monitorsCount,
+			klasa: 'Klasa-0',
+			typ: 'adapter'
+		});
+		
+		equipmentList.push({
+			nazwa: 'Przewód HDMI 3m',
+			ilosc: monitorsCount,
+			klasa: 'Klasa-0',
+			typ: 'przewód'
+		});
+		} else if (computerType === 'PC') {
+		// Dla PC dodaj przejściówki miniDP-HDMI i przewody HDMI 5m w ilości równej liczbie monitorów
+		equipmentList.push({
+			nazwa: 'Przejściówka miniDP-HDMI',
+			ilosc: monitorsCount,
+			klasa: 'Klasa-0',
+			typ: 'adapter'
+		});
+		
+		equipmentList.push({
+			nazwa: 'Przewód HDMI 5m',
+			ilosc: monitorsCount,
+			klasa: 'Klasa-0',
+			typ: 'przewód'
+		});
+	}
+    
+	// Sprawdź czy potrzebny jest rejestrator i dodaj go
+	const recorderSelect = document.getElementById(`recorder_model_${objectId}`);
+	let recorderInfo = null;
+
+	if (recorderSelect) {
+		const selectedModel = recorderSelect.value;
+		
+		if (selectedModel === 'auto') {
+			// Użyj automatycznego wyboru rejestratora
+			recorderInfo = checkIfRecorderNeeded(objectId);
+		} else {
+			// Użyj ręcznie wybranego rejestratora
+			const recordingDaysSelect = document.getElementById(`recording_days_${objectId}`);
+			const recordingDays = parseInt(recordingDaysSelect?.value) || 7;
+			const cameraCount = countSKPAndKATACameras(objectId);
+			const requiredStorage = calculateRequiredStorage(cameraCount, recordingDays);
+			
+			const recorderData = getRecorderInfo(selectedModel);
+			if (recorderData) {
+				// Sprawdź czy jest ręczna konfiguracja dysków
+				let diskConfiguration = getManualDiskConfiguration(objectId, selectedModel);
+				let totalStorage = 0;
+				
+				if (diskConfiguration === null) {
+					// Jeśli nie ma ręcznej konfiguracji, oblicz automatyczną
+					const diskConfig = calculateOptimalDiskConfiguration(recorderData, requiredStorage);
+					diskConfiguration = diskConfig.disksConfiguration;
+					totalStorage = diskConfig.totalStorage;
+				} else {
+					// Oblicz sumę pojemności
+					totalStorage = diskConfiguration.reduce((sum, size) => sum + size, 0);
+				}
+				
+				// Oblicz wymaganą liczbę rejestratorów
+				const recorderCount = Math.max(1, Math.ceil(cameraCount / recorderData.maxCameras));
+				
+				recorderInfo = {
+					model: selectedModel,
+					nazwa: `Rejestrator ${selectedModel}`,
+					ilosc: recorderCount,
+					klasa: 'Lanz',
+					typ: 'NVR',
+					diskSlots: recorderData.diskSlots,
+					disksConfiguration: diskConfiguration,
+					totalStorage: totalStorage
+				};
+			}
+		}
+	}
+
+	// Dodaj rejestrator do listy wyposażenia, jeśli jest potrzebny
+	if (recorderInfo) {
+		equipmentList.push(recorderInfo);
+		
+		// Dodaj również dyski na podstawie konfiguracji (automatycznej lub ręcznej)
+		if (recorderInfo.disksConfiguration && recorderInfo.disksConfiguration.length > 0) {
+			// Grupuj dyski o tej samej pojemności
+			const diskGroups = {};
+			recorderInfo.disksConfiguration.forEach(diskSize => {
+				if (diskSize > 0) { // Dodaj tylko niepuste kieszenie
+					diskGroups[diskSize] = (diskGroups[diskSize] || 0) + 1;
+				}
+			});
+			
+			// Dodaj każdy typ dysku jako osobny element wyposażenia
+			Object.entries(diskGroups).forEach(([diskSize, count]) => {
+				equipmentList.push({
+					nazwa: `Dysk ${diskSize}TB do rejestratora`,
+					ilosc: count * recorderInfo.ilosc, // Uwzględnij liczbę rejestratorów
+					klasa: 'Klasa-0',
+					typ: 'dysk'
+				});
+			});
+		}
+	}
+    // Dodaj wszystko do tabeli
+    tableBody.innerHTML = '';
+    equipmentList.forEach((item, idx) => {
+        addEquipmentRow(tableBody, idx, item.nazwa, item.ilosc);
+    });
+    
+    updateGeneratorsSummaryTable();
+}
+
+/**
+ * Dodaje wiersz wyposażenia do tabeli nastawni
+ * @param {HTMLElement} tableBody - Element tbody tabeli
+ * @param {number} index - Indeks elementu
+ * @param {string} nazwa - Nazwa elementu
+ * @param {number} ilosc - Ilość elementu
+ */
+function addEquipmentRow(tableBody, index, nazwa, ilosc) {
+    const row = document.createElement('tr');
+    
+    // Kolumna LP
+    const lpCell = document.createElement('td');
+    lpCell.textContent = index + 1;
+    row.appendChild(lpCell);
+    
+    // Kolumna Nazwa
+    const nameCell = document.createElement('td');
+    nameCell.textContent = nazwa;
+    row.appendChild(nameCell);
+    
+    // Kolumna Ilość
+    const qtyCell = document.createElement('td');
+    
+    if (typeof ilosc === 'number') {
+        if (ilosc === 1) {
+            qtyCell.innerHTML = `<span class="state-static">1</span>`;
+        } else {
+            const qtyInput = document.createElement('input');
+            qtyInput.type = 'number';
+            qtyInput.className = 'state-input';
+            qtyInput.min = 0;
+            qtyInput.value = ilosc;
+            qtyInput.step = 1;
+            qtyInput.required = true;
+            qtyInput.addEventListener('input', updateGeneratorsSummaryTable);
+            qtyCell.appendChild(qtyInput);
+        }
+    } else if (ilosc && /^\d+$/.test(ilosc)) {
+        qtyCell.innerHTML = `<span class="state-static">${ilosc}</span>`;
+    } else {
+        qtyCell.innerHTML = `<span class="state-static">1</span>`;
+    }
+    
+    row.appendChild(qtyCell);
+    tableBody.appendChild(row);
+}
+
+/**
+ * Aktualizuje wyposażenie nastawni na podstawie ustawień kreatora
+ * @param {number} objectId - ID nastawni
+ */
+function updateNastawniaEquipment(objectId) {
+    const tableBody = document.querySelector(`#nastawniaTable_${objectId} tbody`);
+    if (tableBody) {
+        tableBody.innerHTML = '';
+        generateNastawniaEquipment(objectId, tableBody);
+    }
+}
+
+/**
+ * Aktualizuje wyposażenie nastawni na podstawie ustawień kreatora
+ * @param {number} nastawniaId - ID nastawni
+ */
+function updateNastawniaDevices(nastawniaId) {
+    const lprCheckbox = document.getElementById(`lpr_${nastawniaId}`);
+    const redLightCheckbox = document.getElementById(`redLight_${nastawniaId}`);
+    const lcsCheckbox = document.getElementById(`lcs_${nastawniaId}`);
+    
+    // Generuj tabelę od nowa z nowymi opcjami
+    generateNastawniaTable(nastawniaId);
+    
+    // Sprawdź czy czerwone światło jest zaznaczone - jeśli tak, automatycznie zaznacz LPR
+    // i zablokuj możliwość jego odznaczenia
+    if (redLightCheckbox && redLightCheckbox.checked) {
+        if (lprCheckbox) {
+            lprCheckbox.checked = true;
+            lprCheckbox.disabled = true; // Zablokuj możliwość odznaczenia LPR gdy jest czerwone światło
+        }
+    } else if (lprCheckbox) {
+        lprCheckbox.disabled = false; // Odblokuj LPR gdy czerwone światło jest wyłączone
+    }
+    
+    // Aktualizuj tytuł nastawni z funkcjami
+    updateNastawniaTitle(nastawniaId);
+    
+    // Aktualizuj tabelę podsumowującą
+    updateGeneratorsSummaryTable();
+}
+
+/**
+ * Aktualizuje tytuł nastawni z oznaczeniami funkcji
+ * @param {number} id - ID nastawni
+ */
+function updateNastawniaTitle(id) {
+    const nastawniaNameInput = document.getElementById(`nastawniaName_${id}`);
+    const nastawniaTitle = document.getElementById(`nastawniaTitle_${id}`);
+    const lcsCheckbox = document.getElementById(`lcs_${id}`);
+    const lprCheckbox = document.getElementById(`lpr_${id}`);
+    const redLightCheckbox = document.getElementById(`redLight_${id}`);
+    
+    const baseName = nastawniaNameInput.value.trim() || `Nastawnia ${id}`;
+    let functionTags = [];
+    
+    // Zbierz wszystkie aktywne funkcje
+    if (lcsCheckbox && lcsCheckbox.checked) functionTags.push('LCS');
+    if (lprCheckbox && lprCheckbox.checked) functionTags.push('LPR');
+    if (redLightCheckbox && redLightCheckbox.checked) functionTags.push('RL');
+    
+    // Aktualizuj tytuł z funkcjami
+    if (functionTags.length > 0) {
+        nastawniaTitle.textContent = `[${functionTags.join('/')}] ${baseName}`;
+    } else {
+        nastawniaTitle.textContent = baseName;
+    }
+    
+    // Również aktualizuj nagłówek collapse
+    const collapseTitle = document.getElementById(`collapseTitle_nastawnia_${id}`);
+    if (collapseTitle) {
+        collapseTitle.textContent = nastawniaTitle.textContent;
+    }
+}
+
+/**
+ * Aktualizuje opcje połączonych obiektów dla danej nastawni
+ * Uwzględnia kategorię obiektu przy wyświetlaniu
+ */
+function updateConnectedObjectsOptions(nastawniaId) {
+    const connectedObjectsDiv = document.getElementById(`connectedObjects_${nastawniaId}`);
+    const objects = document.querySelectorAll('.object-item');
+    
+    if (objects.length === 0) {
+        connectedObjectsDiv.innerHTML = '<p style="color: #666; font-style: italic;">Brak dostępnych obiektów. Dodaj obiekty najpierw.</p>';
+        return;
+    }
+
+    let optionsHTML = '';
+    
+    // Dodajemy przycisk odświeżania listy
+    optionsHTML += `
+    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <span>Lista połączonych obiektów:</span>
+        <button type="button" id="refreshObjects_${nastawniaId}" class="refresh-objects-btn" 
+                onclick="updateConnectedObjectsOptions(${nastawniaId})">
+          🔄 Odśwież listę
+        </button>
+    </div>`;
+    
+    objects.forEach(obj => {
+        const objId = obj.id.split('_')[1];
+        const objNameInput = document.getElementById(`objectName_${objId}`);
+        const objName = objNameInput ? objNameInput.value || `Obiekt ${objId}` : `Obiekt ${objId}`;
+        
+        // Określ kategorię obiektu
+        let category = '';
+        if (obj.querySelector('#skp_' + objId + ':checked')) {
+            category = 'SKP';
+        } else if (obj.querySelector('#KATa_' + objId + ':checked')) {
+            category = 'KAT A';
+        } else if (obj.querySelector('#KATB_' + objId + ':checked')) {
+            category = 'KAT B';
+        }
+        
+        // Dodaj nazwę obiektu wraz z kategorią i obsługą zdarzeń
+        optionsHTML += `
+            <div class="checkbox-option">
+                <input type="checkbox" id="connect_${nastawniaId}_${objId}" name="connected_${nastawniaId}" value="${objId}" 
+                       onchange="updateNastawniaEquipment(${nastawniaId})">
+                <label for="connect_${nastawniaId}_${objId}">
+                    <span class="object-name">${objName}</span>
+                    ${category ? `<span class="object-category">(${category})</span>` : ''}
+                </label>
+            </div>
+        `;
+    });
+    
+    connectedObjectsDiv.innerHTML = optionsHTML;
+    
+    // Po zaktualizowaniu listy obiektów, wywołaj funkcję aktualizacji wyposażenia
+    setTimeout(() => {
+        updateNastawniaEquipment(nastawniaId);
+        // Aktualizuj informację o pojemności zapisu
+        updateStorageInfo(nastawniaId);
+    }, 200);
+}

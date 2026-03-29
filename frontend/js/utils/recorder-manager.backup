@@ -1,0 +1,816 @@
+/**
+ * Moduł zarządzający rejestratorami dla nastawni
+ */
+
+// Dane o rejestratorach
+const RECORDERS_DATA = [
+    {
+        model: 'WJ-NU101',
+        minCameras: 1,
+        maxCameras: 4,
+        diskSlots: 1,
+        maxStorage: 24,
+        forLcs: true,
+        supportedDiskSizes: [6, 8, 10, 12, 14, 18, 24] // Obsługiwane pojemności dysków w TB
+    },
+    {
+        model: 'WJ-NU300',
+        minCameras: 5,
+        maxCameras: 16,
+        diskSlots: 1,
+        maxStorage: 24,
+        forLcs: true,
+        supportedDiskSizes: [6, 8, 10, 12, 14, 18, 24]
+    },
+    {
+        model: 'WJ-NU301',
+        minCameras: 5,
+        maxCameras: 16,
+        diskSlots: 2,
+        maxStorage: 48,
+        forLcs: true,
+        supportedDiskSizes: [6, 8, 10, 12, 14, 18, 24]
+    },
+    {
+        model: 'WJ-NX310',
+        minCameras: 17,
+        maxCameras: 32,
+        diskSlots: 4,
+        maxStorage: 72,
+        forLcs: true,
+        supportedDiskSizes: [6, 8, 10, 12, 14, 18]
+    },
+    {
+        model: 'WJ-NX410',
+        minCameras: 33,
+        maxCameras: 64,
+        diskSlots: 9,
+        maxStorage: 216,
+        forLcs: true,
+        supportedDiskSizes: [6, 8, 10, 12, 14, 18, 24]
+    },
+    {
+        model: 'WJ-NX510',
+        minCameras: 65,
+        maxCameras: 128,
+        diskSlots: 9,
+        maxStorage: 216,
+        maxStorageWithExtension: 1296,
+        extensionUnit: 'WJ-HXE410',
+        forLcs: true,
+        supportedDiskSizes: [6, 8, 10, 12, 14, 18, 24]
+    }
+];
+
+/**
+ * Sprawdza czy obiekt jest podłączony do nastawni z LCS
+ * @param {string} objectId - ID obiektu
+ * @returns {boolean} Czy obiekt jest podłączony do nastawni z LCS
+ */
+function isObjectConnectedToLCS(objectId) {
+    const nastawnie = document.querySelectorAll('.nastawnia-item');
+    
+    for (const nastawnia of nastawnie) {
+        const nastawniaId = nastawnia.id.split('_')[1];
+        const lcsCheckbox = document.getElementById(`lcs_${nastawniaId}`);
+        
+        // Jeśli ta nastawnia ma LCS
+        if (lcsCheckbox && lcsCheckbox.checked) {
+            // Sprawdź czy obiekt jest do niej podłączony
+            const connectedObjects = document.querySelectorAll(`#connectedObjects_${nastawniaId} input[type="checkbox"]:checked`);
+            for (const checkbox of connectedObjects) {
+                if (checkbox.value === objectId) {
+                    return true;
+                }
+            }
+        }
+    }
+    
+    return false;
+}
+
+/**
+ * Liczy kamery w obiektach SKP i KAT A podłączonych do nastawni
+ * @param {number} nastawniaId - ID nastawni
+ * @returns {number} Liczba kamer
+ */
+function countSKPAndKATACameras(nastawniaId) {
+    const connectedObjects = document.querySelectorAll(`#connectedObjects_${nastawniaId} input[type="checkbox"]:checked`);
+    let cameraCount = 0;
+    
+    for (const checkbox of connectedObjects) {
+        const objId = checkbox.value;
+        // Pomiń nastawnie
+        if (objId.includes('nastawnia_')) continue;
+        
+        // Pomiń obiekty podłączone do innej nastawni z LCS (jeśli ta nastawnia nie jest LCS)
+        const thisNastawniaLcs = document.getElementById(`lcs_${nastawniaId}`)?.checked;
+        if (!thisNastawniaLcs && isObjectConnectedToLCS(objId)) continue;
+        
+        const objectElement = document.getElementById(`object_${objId}`);
+        if (!objectElement) continue;
+        
+        // Sprawdź czy to SKP lub KAT A
+        const skpRadio = objectElement.querySelector('input[id^="skp_"]:checked');
+        const katARadio = objectElement.querySelector('input[id^="KATa_"]:checked');
+        
+        if (skpRadio || katARadio) {
+            // Znajdź wszystkie kamery w obiekcie
+            let tableSelector = skpRadio ? '.skp-results tbody' : '.KATa-results tbody';
+            
+            const rows = objectElement.querySelectorAll(`${tableSelector} tr`);
+            rows.forEach(row => {
+                const nameCell = row.querySelector('td:nth-child(2)');
+                if (nameCell && (
+                    nameCell.textContent.includes('Kamera') || 
+                    nameCell.textContent.includes('Kamra')
+                )) {
+                    const qtyCell = row.querySelector('td:nth-child(3)');
+                    if (qtyCell) {
+                        const qtyInput = qtyCell.querySelector('input');
+                        const qty = qtyInput ? parseInt(qtyInput.value) || 0 : parseInt(qtyCell.textContent.trim()) || 0;
+                        cameraCount += qty;
+                    }
+                }
+            });
+        }
+    }
+    
+    // Jeśli to LCS, dodaj kamery z podłączonych nastawni bez LCS
+    const isLcs = document.getElementById(`lcs_${nastawniaId}`)?.checked;
+    if (isLcs) {
+        // Sprawdź podłączone nastawnie
+        for (const checkbox of connectedObjects) {
+            const objId = checkbox.value;
+            // Weź pod uwagę tylko podłączone nastawnie
+            if (!objId.includes('nastawnia_')) continue;
+            
+            const connectedNastawniaId = objId.split('_')[1];
+            const connectedNastawniaLcs = document.getElementById(`lcs_${connectedNastawniaId}`)?.checked;
+            
+            // Jeśli podłączona nastawnia nie jest LCS, dodaj jej kamery
+            if (!connectedNastawniaLcs) {
+                cameraCount += countSKPAndKATACameras(connectedNastawniaId);
+            }
+        }
+    }
+    
+    return cameraCount;
+}
+
+/**
+ * Oblicza wymaganą pojemność zapisu dla określonej liczby kamer i dni zapisu
+ * @param {number} cameraCount - Liczba kamer
+ * @param {number} recordingDays - Liczba dni zapisu
+ * @returns {number} Wymagana pojemność w TB
+ */
+function calculateRequiredStorage(cameraCount, recordingDays) {
+    // Wzór: (liczba_kamer * 4) * (liczba_dni_zapisu * 0.0108) TB
+    return (cameraCount * 4) * (recordingDays * 0.0108);
+}
+
+/**
+ * Oblicza optymalną konfigurację dysków dla rejestratora
+ * @param {Object} recorder - Informacje o rejestratorze
+ * @param {number} requiredStorage - Wymagana pojemność w TB
+ * @returns {Object} Informacje o optymalnej konfiguracji dysków
+ */
+function calculateOptimalDiskConfiguration(recorder, requiredStorage) {
+    if (!recorder || !recorder.supportedDiskSizes || recorder.supportedDiskSizes.length === 0) {
+        return {
+            minimumRequiredSlots: 0,
+            disksConfiguration: [],
+            totalStorage: 0
+        };
+    }
+    
+    // Sortuj rozmiary dysków od największego do najmniejszego
+    const sortedDiskSizes = [...recorder.supportedDiskSizes].sort((a, b) => b - a);
+    
+    // Sprawdź, czy nawet największy dysk w każdej kieszeni nie pokryje wymaganej pojemności
+    const maxPossibleStorage = sortedDiskSizes[0] * recorder.diskSlots;
+    if (maxPossibleStorage < requiredStorage) {
+        return {
+            minimumRequiredSlots: recorder.diskSlots,
+            disksConfiguration: Array(recorder.diskSlots).fill(sortedDiskSizes[0]),
+            totalStorage: maxPossibleStorage,
+            insufficient: true
+        };
+    }
+    
+    // Funkcja do znajdowania optymalnej konfiguracji dysków
+    function findOptimalConfiguration() {
+        // Strategia 1: Użyj minimalnej liczby dysków o największej pojemności
+        let bestConfig = [];
+        let bestTotalStorage = 0;
+        let usedSlots = 0;
+        
+        let remainingStorage = requiredStorage;
+        for (const diskSize of sortedDiskSizes) {
+            while (remainingStorage > 0 && usedSlots < recorder.diskSlots) {
+                bestConfig.push(diskSize);
+                bestTotalStorage += diskSize;
+                remainingStorage -= diskSize;
+                usedSlots++;
+                
+                // Jeśli pokryliśmy wymaganą pojemność, możemy zakończyć
+                if (remainingStorage <= 0) break;
+            }
+            if (remainingStorage <= 0) break;
+        }
+        
+        // Jeśli nie udało się pokryć wymaganej pojemności, użyj wszystkich dostępnych kieszeni
+        if (remainingStorage > 0) {
+            while (usedSlots < recorder.diskSlots) {
+                bestConfig.push(sortedDiskSizes[0]);
+                bestTotalStorage += sortedDiskSizes[0];
+                usedSlots++;
+            }
+        }
+        
+        return {
+            minimumRequiredSlots: usedSlots,
+            disksConfiguration: bestConfig,
+            totalStorage: bestTotalStorage
+        };
+    }
+    
+    return findOptimalConfiguration();
+}
+
+/**
+ * Określa model rejestratora na podstawie liczby kamer i pojemności zapisu
+ * @param {number} cameraCount - Liczba kamer
+ * @param {number} storageTB - Wymagana pojemność w TB
+ * @returns {Object|null} Informacja o rejestratorze lub null jeśli nie jest potrzebny
+ */
+function determineRecorderModel(cameraCount, storageTB) {
+    if (cameraCount === 0) {
+        return null; // Nie ma kamer, nie potrzeba rejestratora
+    }
+    
+    let selectedRecorder = null;
+    
+    // Szukamy odpowiedniego rejestratora na podstawie liczby kamer
+    for (const recorder of RECORDERS_DATA) {
+        if (cameraCount >= recorder.minCameras && cameraCount <= recorder.maxCameras) {
+            // Dla WJ-NU300 i WJ-NU301 mamy dodatkowe sprawdzenie pojemności
+            if (recorder.model === 'WJ-NU300' && storageTB > recorder.maxStorage) {
+                continue; // Przejdź do kolejnego (WJ-NU301)
+            } else if (recorder.model === 'WJ-NU301' && storageTB <= RECORDERS_DATA[1].maxStorage) {
+                continue; // Lepiej użyć WJ-NU300
+            }
+            
+            selectedRecorder = recorder;
+            break;
+        }
+    }
+    
+    // Jeśli nie znaleziono dopasowania, sprawdź największy dostępny rejestrator
+    if (!selectedRecorder && cameraCount > 0) {
+        const lastRecorder = RECORDERS_DATA[RECORDERS_DATA.length - 1];
+        if (cameraCount > lastRecorder.maxCameras) {
+            return {
+                model: 'Konfiguracja specjalna',
+                nazwa: 'Rejestrator - konfiguracja specjalna',
+                ilosc: 1,
+                klasa: 'Lanz',
+                typ: 'NVR',
+                warning: `Liczba kamer (${cameraCount}) przekracza maksymalną obsługiwaną liczbę (${lastRecorder.maxCameras})`
+            };
+        }
+    }
+    
+    if (selectedRecorder) {
+        // Oblicz optymalną konfigurację dysków
+        const diskConfig = calculateOptimalDiskConfiguration(selectedRecorder, storageTB);
+        
+        // Sprawdź czy pojemność jest wystarczająca
+        let warning = null;
+        if (storageTB > diskConfig.totalStorage) {
+            if (selectedRecorder.maxStorageWithExtension) {
+                if (storageTB > selectedRecorder.maxStorageWithExtension) {
+                    warning = `Wymagana pojemność zapisu (${storageTB.toFixed(2)} TB) przekracza maksymalną pojemność (${selectedRecorder.maxStorageWithExtension} TB)`;
+                } else {
+                    warning = `Wymagana pojemność zapisu (${storageTB.toFixed(2)} TB) wymaga jednostki rozszerzającej ${selectedRecorder.extensionUnit}`;
+                }
+            } else {
+                warning = `Wymagana pojemność zapisu (${storageTB.toFixed(2)} TB) przekracza maksymalną pojemność (${selectedRecorder.maxStorage} TB)`;
+            }
+        }
+        
+        return {
+            model: selectedRecorder.model,
+            nazwa: `Rejestrator ${selectedRecorder.model}`,
+            ilosc: 1,
+            klasa: 'Lanz',
+            typ: 'NVR',
+            warning: warning,
+            diskSlots: selectedRecorder.diskSlots,
+            requiredDiskSlots: diskConfig.minimumRequiredSlots,
+            disksConfiguration: diskConfig.disksConfiguration,
+            maxStorage: selectedRecorder.maxStorage,
+            totalStorage: diskConfig.totalStorage
+        };
+    }
+    
+    return null;
+}
+
+/**
+ * Sprawdza czy nastawnia wymaga rejestratora
+ * @param {number} nastawniaId - ID nastawni
+ * @returns {Object|null} Informacja o rejestratorze lub null jeśli nie jest potrzebny
+ */
+function checkIfRecorderNeeded(nastawniaId) {
+    // Sprawdź czy to nastawnia z LCS lub nastawnia bez LCS niepodłączona do LCS
+    const isLcs = document.getElementById(`lcs_${nastawniaId}`)?.checked;
+    const connectedToLcs = isNastawiaConnectedToLCS(nastawniaId);
+    
+    // Jeśli to nastawnia bez LCS podłączona do LCS, nie potrzeba rejestratora
+    if (!isLcs && connectedToLcs) {
+        return null;
+    }
+    
+    // Policz kamery w podłączonych obiektach SKP i KAT A
+    const cameraCount = countSKPAndKATACameras(nastawniaId);
+    
+    // Jeśli są kamery, określ pojemność zapisu
+    if (cameraCount > 0) {
+        // Pobierz liczbę dni zapisu
+        const recordingDaysSelect = document.getElementById(`recording_days_${nastawniaId}`);
+        const recordingDays = parseInt(recordingDaysSelect?.value) || 7;
+        
+        // Oblicz wymaganą pojemność
+        const requiredStorage = calculateRequiredStorage(cameraCount, recordingDays);
+        
+        // Określ model rejestratora
+        return determineRecorderModel(cameraCount, requiredStorage);
+    }
+    
+    return null; // Nie ma kamer, nie potrzeba rejestratora
+}
+
+/**
+ * Sprawdza czy nastawnia jest podłączona do nastawni z LCS
+ * @param {number} nastawniaId - ID nastawni
+ * @returns {boolean} Czy nastawnia jest podłączona do nastawni z LCS
+ */
+function isNastawiaConnectedToLCS(nastawniaId) {
+    const nastawnie = document.querySelectorAll('.nastawnia-item');
+    
+    for (const nastawnia of nastawnie) {
+        const id = nastawnia.id.split('_')[1];
+        const lcsCheckbox = document.getElementById(`lcs_${id}`);
+        
+        // Jeśli to nastawnia z LCS
+        if (lcsCheckbox && lcsCheckbox.checked) {
+            // Sprawdź czy nasza nastawnia jest do niej podłączona
+            const connectedObjects = document.querySelectorAll(`#connectedObjects_${id} input[type="checkbox"]:checked`);
+            for (const checkbox of connectedObjects) {
+                if (checkbox.value === `nastawnia_${nastawniaId}`) {
+                    return true;
+                }
+            }
+        }
+    }
+    
+    return false;
+}
+
+/**
+ * Pobiera wszystkie dostępne modele rejestratorów
+ * @returns {Array} Lista modeli rejestratorów
+ */
+function getAllRecorderModels() {
+    return RECORDERS_DATA.map(recorder => recorder.model);
+}
+
+/**
+ * Pobiera informacje o konkretnym modelu rejestratora
+ * @param {string} model - Model rejestratora
+ * @returns {Object|null} Informacje o rejestratorze lub null jeśli nie znaleziono
+ */
+function getRecorderInfo(model) {
+    return RECORDERS_DATA.find(recorder => recorder.model === model) || null;
+}
+/**
+ * Zapisuje ręczną konfigurację dysków
+ * @param {number} nastawniaId - ID nastawni
+ * @param {string} recorderModel - Model rejestratora
+ * @param {Array} configuration - Konfiguracja dysków
+ */
+function saveManualDiskConfiguration(nastawniaId, recorderModel, configuration) {
+    // Filtruj puste kieszenie (dyski o wartości 0)
+    const nonEmptyConfiguration = configuration.filter(size => size > 0);
+    
+    // Używamy localStorage do przechowywania konfiguracji
+    const storageKey = `diskConfig_${nastawniaId}_${recorderModel}`;
+    localStorage.setItem(storageKey, JSON.stringify(nonEmptyConfiguration));
+}
+
+/**
+ * Pobiera zapisaną ręczną konfigurację dysków
+ * @param {number} nastawniaId - ID nastawni
+ * @param {string} recorderModel - Model rejestratora
+ * @returns {Array|null} Konfiguracja dysków lub null jeśli nie znaleziono
+ */
+function getManualDiskConfiguration(nastawniaId, recorderModel) {
+    const storageKey = `diskConfig_${nastawniaId}_${recorderModel}`;
+    const storedConfig = localStorage.getItem(storageKey);
+    
+    if (storedConfig) {
+        try {
+            const config = JSON.parse(storedConfig);
+            return Array.isArray(config) ? config : null;
+        } catch (e) {
+            console.error("Błąd odczytu konfiguracji dysków:", e);
+            return null;
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * Czyści zapisaną ręczną konfigurację dysków
+ * @param {number} nastawniaId - ID nastawni
+ * @param {string} recorderModel - Model rejestratora (opcjonalnie)
+ */
+function clearManualDiskConfiguration(nastawniaId, recorderModel = null) {
+    if (recorderModel) {
+        // Usuń konfigurację dla konkretnego modelu
+        const storageKey = `diskConfig_${nastawniaId}_${recorderModel}`;
+        localStorage.removeItem(storageKey);
+    } else {
+        // Usuń wszystkie konfiguracje dla danej nastawni
+        // Znajdź wszystkie klucze zawierające id nastawni
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith(`diskConfig_${nastawniaId}_`)) {
+                keysToRemove.push(key);
+            }
+        }
+        
+        // Usuń znalezione klucze
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+    }
+}
+
+/**
+ * Konfiguruje obsługę zdarzeń dla interfejsu konfiguracji dysków
+ * @param {number} nastawniaId - ID nastawni
+ */
+function setupDiskConfigEvents(nastawniaId) {
+    // Przyciski przełączające tryb konfiguracji
+    const autoConfigBtn = document.getElementById(`autoConfigDisk_${nastawniaId}`);
+    const manualConfigBtn = document.getElementById(`manualConfigDisk_${nastawniaId}`);
+    
+    if (autoConfigBtn) {
+        autoConfigBtn.addEventListener('click', () => {
+            // Usuń zapisaną ręczną konfigurację
+            clearManualDiskConfiguration(nastawniaId);
+            // Odśwież UI
+            updateRecorderInfo(nastawniaId);
+            // Aktualizuj wyposażenie
+            updateNastawniaEquipment(nastawniaId);
+        });
+    }
+    
+    if (manualConfigBtn) {
+        manualConfigBtn.addEventListener('click', () => {
+            // Pobierz aktualną konfigurację automatyczną jako punkt startowy
+            const recorderSelect = document.getElementById(`recorder_model_${nastawniaId}`);
+            const selectedModel = recorderSelect.value;
+            const recorderInfo = getRecorderInfo(selectedModel);
+            
+            if (recorderInfo) {
+                const recordingDays = parseInt(document.getElementById(`recording_days_${nastawniaId}`)?.value) || 7;
+                const cameraCount = countSKPAndKATACameras(nastawniaId);
+                const requiredStorage = calculateRequiredStorage(cameraCount, recordingDays);
+                
+                // Oblicz optymalną konfigurację jako punkt startowy
+                const diskConfig = calculateOptimalDiskConfiguration(recorderInfo, requiredStorage);
+                
+                // Zapisz jako ręczną konfigurację
+                saveManualDiskConfiguration(nastawniaId, selectedModel, diskConfig.disksConfiguration);
+                
+                // Odśwież UI
+                updateRecorderInfo(nastawniaId);
+            }
+        });
+    }
+    
+    // Obsługa zmiany wyboru dysków
+    const diskSelects = document.querySelectorAll(`[id^="diskSlot_${nastawniaId}_"]`);
+    diskSelects.forEach(select => {
+        select.addEventListener('change', () => {
+            // Pobierz aktualną konfigurację dysków
+            const configuration = [];
+            for (let i = 0; i < diskSelects.length; i++) {
+                const slotSelect = document.getElementById(`diskSlot_${nastawniaId}_${i}`);
+                if (slotSelect) {
+                    configuration[i] = parseInt(slotSelect.value) || 0;
+                } else {
+                    configuration[i] = 0;
+                }
+            }
+            
+            // Aktualizuj sumę pojemności
+            const totalStorage = configuration.reduce((sum, size) => sum + size, 0);
+            const storageSpan = document.getElementById(`currentStorage_${nastawniaId}`);
+            if (storageSpan) storageSpan.textContent = totalStorage;
+            
+            // Aktualizuj status wystarczalności
+            const recordingDays = parseInt(document.getElementById(`recording_days_${nastawniaId}`)?.value) || 7;
+            const cameraCount = countSKPAndKATACameras(nastawniaId);
+            const requiredStorage = calculateRequiredStorage(cameraCount, recordingDays);
+            
+            const statusElement = document.getElementById(`storageStatus_${nastawniaId}`);
+            if (statusElement) {
+                statusElement.innerHTML = totalStorage >= requiredStorage ? 
+                    '<span class="success">✅ Wystarczająca pojemność</span>' : 
+                    '<span class="warning">⚠️ Niewystarczająca pojemność</span>';
+            }
+            
+            // Zapisz konfigurację
+            const recorderSelect = document.getElementById(`recorder_model_${nastawniaId}`);
+            const selectedModel = recorderSelect.value;
+            saveManualDiskConfiguration(nastawniaId, selectedModel, configuration);
+            
+            // Aktualizuj wyposażenie
+            updateNastawniaEquipment(nastawniaId);
+        });
+    });
+}
+
+/**
+ * Oblicza optymalną konfigurację dysków dla rejestratora
+ * @param {Object} recorder - Informacje o rejestratorze
+ * @param {number} requiredStorage - Wymagana pojemność w TB
+ * @returns {Object} Informacje o optymalnej konfiguracji dysków
+ */
+function calculateOptimalDiskConfiguration(recorder, requiredStorage) {
+    if (!recorder || !recorder.supportedDiskSizes || recorder.supportedDiskSizes.length === 0) {
+        return {
+            minimumRequiredSlots: 0,
+            disksConfiguration: [],
+            totalStorage: 0
+        };
+    }
+    
+    // Sortuj rozmiary dysków od największego do najmniejszego
+    const sortedDiskSizes = [...recorder.supportedDiskSizes].sort((a, b) => b - a);
+    
+    // Sprawdź, czy nawet największy dysk w każdej kieszeni nie pokryje wymaganej pojemności
+    const maxPossibleStorage = sortedDiskSizes[0] * recorder.diskSlots;
+    if (maxPossibleStorage < requiredStorage) {
+        return {
+            minimumRequiredSlots: recorder.diskSlots,
+            disksConfiguration: Array(recorder.diskSlots).fill(sortedDiskSizes[0]),
+            totalStorage: maxPossibleStorage,
+            insufficient: true
+        };
+    }
+    
+    // Funkcja do znajdowania optymalnej konfiguracji dysków
+    function findOptimalConfiguration() {
+        // Strategia 1: Użyj minimalnej liczby dysków o największej pojemności
+        let bestConfig = [];
+        let bestTotalStorage = 0;
+        let usedSlots = 0;
+        
+        let remainingStorage = requiredStorage;
+        for (const diskSize of sortedDiskSizes) {
+            while (remainingStorage > 0 && usedSlots < recorder.diskSlots) {
+                bestConfig.push(diskSize);
+                bestTotalStorage += diskSize;
+                remainingStorage -= diskSize;
+                usedSlots++;
+                
+                // Jeśli pokryliśmy wymaganą pojemność, możemy zakończyć
+                if (remainingStorage <= 0) break;
+            }
+            if (remainingStorage <= 0) break;
+        }
+        
+        // Jeśli nie udało się pokryć wymaganej pojemności, użyj wszystkich dostępnych kieszeni
+        if (remainingStorage > 0) {
+            while (usedSlots < recorder.diskSlots) {
+                bestConfig.push(sortedDiskSizes[0]);
+                bestTotalStorage += sortedDiskSizes[0];
+                usedSlots++;
+            }
+        }
+        
+        return {
+            minimumRequiredSlots: usedSlots,
+            disksConfiguration: bestConfig,
+            totalStorage: bestTotalStorage
+        };
+    }
+    
+    return findOptimalConfiguration();
+}
+/**
+ /**
+ * Aktualizuje informacje o wybranym rejestratorze w UI
+ * @param {number} nastawniaId - ID nastawni
+ */
+function updateRecorderInfo(nastawniaId) {
+    const recorderSelect = document.getElementById(`recorder_model_${nastawniaId}`);
+    const recorderInfoDiv = document.getElementById(`recorder_info_${nastawniaId}`);
+    const recorderRequirementsDiv = document.getElementById(`recorder_requirements_${nastawniaId}`);
+    
+    if (!recorderSelect || !recorderInfoDiv || !recorderRequirementsDiv) return;
+    
+    const selectedModel = recorderSelect.value;
+    
+    // Pobierz liczbę kamer i wymaganą pojemność
+    const cameraCount = countSKPAndKATACameras(nastawniaId);
+    const recordingDays = parseInt(document.getElementById(`recording_days_${nastawniaId}`)?.value) || 7;
+    const requiredStorage = calculateRequiredStorage(cameraCount, recordingDays);
+    
+    // Aktualizuj informacje o wymaganiach
+    recorderRequirementsDiv.innerHTML = `
+        <strong>Aktualne wymagania:</strong><br>
+        • Liczba wykrytych kamer: ${cameraCount}<br>
+        • Wymagana pojemność dla ${recordingDays} dni zapisu: ${requiredStorage.toFixed(2)} TB<br>
+    `;
+    
+    // Tworzenie interfejsu ręcznej konfiguracji dysków
+    function createDiskConfigUI(recorderInfo, diskConfig, isAutoConfig = false) {
+        if (!recorderInfo || !diskConfig) return '';
+        
+        const supportedSizes = recorderInfo.supportedDiskSizes || [6, 8, 10, 12, 14, 18, 24];
+        let diskConfigUI = `
+            <div class="disk-config-container" id="diskConfigContainer_${nastawniaId}">
+                <div class="disk-config-header">
+                    <strong>Konfiguracja dysków:</strong>
+                    <div class="disk-config-actions">
+                        <button type="button" id="autoConfigDisk_${nastawniaId}" class="auto-config-btn" 
+                                ${isAutoConfig ? 'disabled' : ''}>Automatycznie</button>
+                        <button type="button" id="manualConfigDisk_${nastawniaId}" class="manual-config-btn"
+                                ${!isAutoConfig ? 'disabled' : ''}>Ręcznie</button>
+                    </div>
+                </div>
+                <div class="disk-slots-container" id="diskSlotsContainer_${nastawniaId}">
+        `;
+        
+        // Jeśli mamy konfigurację automatyczną
+        if (isAutoConfig) {
+            // Pokaż automatyczną konfigurację
+            if (diskConfig.disksConfiguration && diskConfig.disksConfiguration.length > 0) {
+                diskConfigUI += `
+                    <div class="auto-disk-config">
+                        <p>Optymalna konfiguracja dysków: ${diskConfig.disksConfiguration.map(size => `${size}TB`).join(' + ')}</p>
+                        <p>Wykorzystane kieszenie: ${diskConfig.minimumRequiredSlots || diskConfig.disksConfiguration.length} z ${recorderInfo.diskSlots}</p>
+                        <p>Łączna pojemność: ${diskConfig.totalStorage} TB</p>
+                    </div>
+                `;
+            } else {
+                diskConfigUI += `<p class="no-disks">Brak dysków do skonfigurowania</p>`;
+            }
+        } else {
+            // Pokaż interfejs ręcznej konfiguracji
+            for (let i = 0; i < recorderInfo.diskSlots; i++) {
+                const currentDiskSize = diskConfig.disksConfiguration && diskConfig.disksConfiguration[i] ? diskConfig.disksConfiguration[i] : 0;
+                
+                diskConfigUI += `
+                    <div class="disk-slot">
+                        <label for="diskSlot_${nastawniaId}_${i}">Kieszeń ${i+1}:</label>
+                        <select id="diskSlot_${nastawniaId}_${i}" class="disk-size-select" data-slot="${i}" data-nastawnia="${nastawniaId}">
+                            <option value="0">Pusty</option>
+                            ${supportedSizes.map(size => `<option value="${size}" ${currentDiskSize === size ? 'selected' : ''}>${size} TB</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+            }
+            
+            // Dodaj podsumowanie
+            diskConfigUI += `
+                <div class="disk-config-summary" id="diskConfigSummary_${nastawniaId}">
+                    <p>Aktualna pojemność: <span id="currentStorage_${nastawniaId}">${diskConfig.totalStorage || 0}</span> TB</p>
+                    <p>Wymagana pojemność: ${requiredStorage.toFixed(2)} TB</p>
+                    <p class="status" id="storageStatus_${nastawniaId}">
+                        ${diskConfig.totalStorage >= requiredStorage ? 
+                        '<span class="success">✅ Wystarczająca pojemność</span>' : 
+                        '<span class="warning">⚠️ Niewystarczająca pojemność</span>'}
+                    </p>
+                </div>
+            `;
+        }
+        
+        diskConfigUI += `
+                </div>
+            </div>
+        `;
+        
+        return diskConfigUI;
+    }
+    
+    if (selectedModel === 'auto') {
+        // Dla wyboru automatycznego
+        const recommendedRecorder = checkIfRecorderNeeded(nastawniaId);
+        
+        if (recommendedRecorder) {
+            const recorderInfo = getRecorderInfo(recommendedRecorder.model);
+            const diskConfigUI = createDiskConfigUI(recorderInfo, recommendedRecorder, true);
+            
+            recorderInfoDiv.innerHTML = `
+                <strong>Informacje o rekomendowanym rejestratorze (${recommendedRecorder.model}):</strong><br>
+                • Maksymalna liczba kamer: ${recorderInfo?.maxCameras || 'N/A'}<br>
+                • Liczba kieszeni na dyski: ${recommendedRecorder.diskSlots}<br>
+                ${recommendedRecorder.warning ? `<span class="warning">⚠️ ${recommendedRecorder.warning}</span>` : '<span class="success">✅ Zgodny z wymaganiami</span>'}
+                ${diskConfigUI}
+            `;
+        } else {
+            recorderInfoDiv.innerHTML = `
+                <strong>Informacje o rejestratorze:</strong><br>
+                <span class="info">ℹ️ Rejestrator nie jest wymagany dla tej nastawni</span>
+            `;
+        }
+    } else {
+        // Dla ręcznego wyboru
+        const recorderInfo = getRecorderInfo(selectedModel);
+        
+        if (recorderInfo) {
+            // Sprawdź czy mamy zapisaną ręczną konfigurację
+            let manualConfig = getManualDiskConfiguration(nastawniaId, selectedModel);
+            let isManualMode = manualConfig !== null;
+            
+            // Jeśli nie ma ręcznej konfiguracji, oblicz automatyczną
+            const diskConfig = isManualMode ? 
+                { disksConfiguration: manualConfig, totalStorage: manualConfig.reduce((sum, size) => sum + size, 0) } : 
+                calculateOptimalDiskConfiguration(recorderInfo, requiredStorage);
+            
+            // Interfejs konfiguracji dysków
+            const diskConfigUI = createDiskConfigUI(recorderInfo, diskConfig, !isManualMode);
+            
+            // Sprawdź zgodność z wymaganiami
+            let warningMessage = '';
+            let isCompatible = true;
+            
+            if (cameraCount > recorderInfo.maxCameras) {
+                warningMessage += `⚠️ Liczba kamer (${cameraCount}) przekracza maksymalną obsługiwaną (${recorderInfo.maxCameras})<br>`;
+                isCompatible = false;
+            }
+            
+            if (requiredStorage > diskConfig.totalStorage) {
+                if (recorderInfo.maxStorageWithExtension) {
+                    if (requiredStorage > recorderInfo.maxStorageWithExtension) {
+                        warningMessage += `⚠️ Wymagana pojemność (${requiredStorage.toFixed(2)} TB) przekracza maksymalną (${recorderInfo.maxStorageWithExtension} TB)<br>`;
+                        isCompatible = false;
+                    } else {
+                        warningMessage += `⚠️ Wymagana pojemność (${requiredStorage.toFixed(2)} TB) wymaga jednostki rozszerzającej ${recorderInfo.extensionUnit}<br>`;
+                    }
+                } else {
+                    warningMessage += `⚠️ Wymagana pojemność (${requiredStorage.toFixed(2)} TB) przekracza maksymalną (${recorderInfo.maxStorage} TB)<br>`;
+                    isCompatible = false;
+                }
+            }
+            
+            // Sprawdź czy ta nastawnia powinna mieć rejestrator
+            const isLcs = document.getElementById(`lcs_${nastawniaId}`)?.checked;
+            const connectedToLcs = isNastawiaConnectedToLCS(nastawniaId);
+            
+            if (!isLcs && connectedToLcs) {
+                warningMessage += `⚠️ Nastawnia bez LCS podłączona do nastawni z LCS zwykle nie wymaga rejestratora<br>`;
+            }
+            
+            recorderInfoDiv.innerHTML = `
+                <strong>Informacje o rejestratorze (${recorderInfo.model}):</strong><br>
+                • Maksymalna liczba kamer: ${recorderInfo.maxCameras}<br>
+                • Liczba kieszeni na dyski: ${recorderInfo.diskSlots}<br>
+                ${warningMessage || (isCompatible ? '<span class="success">✅ Zgodny z wymaganiami</span>' : '')}
+                ${diskConfigUI}
+            `;
+        } else {
+            recorderInfoDiv.innerHTML = `
+                <strong>Informacje o rejestratorze:</strong><br>
+                <span class="warning">⚠️ Nie znaleziono informacji o wybranym modelu</span>
+            `;
+        }
+    }
+    
+    // Dodaj obsługę zdarzeń po załadowaniu UI
+    setTimeout(() => {
+        setupDiskConfigEvents(nastawniaId);
+    }, 100);
+}
+
+// Eksportuj funkcje do globalnej przestrzeni nazw
+window.checkIfRecorderNeeded = checkIfRecorderNeeded;
+window.countSKPAndKATACameras = countSKPAndKATACameras;
+window.calculateRequiredStorage = calculateRequiredStorage;
+window.getAllRecorderModels = getAllRecorderModels;
+window.getRecorderInfo = getRecorderInfo;
+window.updateRecorderInfo = updateRecorderInfo;
+window.calculateOptimalDiskConfiguration = calculateOptimalDiskConfiguration;
+window.checkIfRecorderNeeded = checkIfRecorderNeeded;
+window.countSKPAndKATACameras = countSKPAndKATACameras;
+window.calculateRequiredStorage = calculateRequiredStorage;
+window.getAllRecorderModels = getAllRecorderModels;
+window.getRecorderInfo = getRecorderInfo;
+window.updateRecorderInfo = updateRecorderInfo;

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Porównanie display</title>
+  <style>
+    .container {
+      border: 2px solid black;
+      padding: 10px;
+      margin-bottom: 20px;
+    }
+    .box {
+      padding: 20px;
+      color: white;
+      font-weight: bold;
+      text-align: center;
+    }
+    .a { background: tomato; }
+    .b { background: skyblue; }
+    .c { background: lightgreen; }
+  </style>
+</head>
+<body>
+  <h2>display: block (domyślny)</h2>
+  <div class="container" style="display: block;">
+    <div class="box a">A</div>
+    <div class="box b">B</div>
+    <div class="box c">C</div>
+	<div class="container" style="display: flex; gap: 10px;">
+    <div class="box a">A</div>
+    <div class="box b">B</div>
+    <div class="box c">C</div>
+	<div class="container" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+    <div class="box a">A</div>
+    <div class="box b">B</div>
+    <div class="box c">C</div>
+	<div class="box c">d</div>
+	<div class="box c">e</div>
+	<div class="box c">f</div>
+	</div>
+	</Div>
+  </div>
+
+  <h2>display: flex</h2>
+  <div class="container" style="display: flex; gap: 10px;">
+    <div class="box a">A</div>
+    <div class="box b">B</div>
+    <div class="box c">C</div>
+  </div>
+
+  <h2>display: grid</h2>
+  <div class="container" style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 10px;">
+    <div class="box a">A</div>
+    <div class="box b">B</div>
+    <div class="box c">C</div>
+	<div class="box c">d</div>
+	<div class="box c">e</div>
+	<div class="box c">f</div>
+  </div>
+</body>
+</html>

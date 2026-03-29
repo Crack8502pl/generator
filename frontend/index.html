@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Zarządzania Zadaniami - DER-MAG</title>
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,600&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css" type="text/css">
+</head>
+<body>
+    <header class="header">
+       	<div class="header-content">
+            <div class="logo">
+                <div class="logo-img">DM</div>
+                <div class="logo-text">
+                    <h1>DER-MAG</h1>
+                    <span>Systemy Teletechniczne</span>
+                </div>
+            </div>
+            <div style="color: #dbeafe; font-size: 15px; padding-top: 10px;">
+                Wiodący dostawca nowoczesnych i niezawodnych systemów teletechnicznych
+            </div>
+        </div>
+    </header>
+    <div class="container">
+        <h2 class="page-title">System Zarządzania Zadaniami</h2>
+        <form id="taskForm">
+            <div class="form-group">
+                <label for="taskName">Nazwa zadania:</label>
+                <input type="text" id="taskName" name="taskName" required placeholder="Wprowadź nazwę zadania...">
+            <div class="form-group" style="display: flex; gap: 150px;">
+			</div>
+			</div>
+			<button type="button" id="addObjectBtn" class="add-object-btn">
+                ➕ Dodaj obiekt
+			</button>
+			&nbsp;
+			<button type="button" id="addNastawniaBtn" class="add-nastawnia-btn">
+                🏢 Dodaj Nastawnie
+            </button>
+            <div id="objectsContainer" class="objects-container empty">
+                <p>Kliknij "Dodaj obiekt" lub "Dodaj Nastawnie" aby utworzyć pierwszy element</p>
+                <div id="objectsList"></div>
+            </div>
+            <!-- Tabela sum generatorów -->
+            <div id="generatorsSummaryTableContainer"></div>
+            <div class="generators-summary-buttons">
+				<button type="button" id="downloadSummaryBtn">📥 Pobierz podsumowanie (CSV)</button>
+				&nbsp;
+				<button type="submit" class="submit-btn" id="submitBtn" disabled style="flex: 1;">💾 Zapisz zadanie do CSV</button>
+			</div>
+			<br/>
+            <div style="display: flex; gap: 150px;">
+                <button type="button" class="submit-btn" id="resetBtn" onclick="resetForm()" style="background: #6c757d; flex: 0 0 auto; width: auto; padding: 4px 6px;">🔄 Reset</button>
+            </div>
+        </form>
+        <!-- Sekcja konfiguracji e-mail -->
+        <div class="email-config" style="margin-top: 30px; padding: 25px; background: linear-gradient(90deg, #fff5f0 0%, #fef7f0 100%); border: 1.4px solid #ff6b35; border-radius: 15px;">
+            <h3 style="color: #ff6b35; margin-bottom: 20px; font-family: 'Montserrat', Arial, sans-serif;">📧 Konfiguracja e-mail</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group">
+                    <label for="recipientEmail">Adres e-mail odbiorcy:</label>
+                    <input type="email" id="recipientEmail" placeholder="recipient@company.com" style="width: 100%;">
+                </div>
+                <div class="form-group">
+                    <label for="senderName">Nazwa nadawcy:</label>
+                    <input type="text" id="senderName" placeholder="Twoje imię i nazwisko" value="System DER-MAG" style="width: 100%;">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="emailSubjectPrefix">Prefiks tematu e-mail:</label>
+                <input type="text" id="emailSubjectPrefix" placeholder="np. [PILNE] lub [DER-MAG]" value="[DER-MAG]" style="width: 100%;">
+            </div>
+        </div>
+
+        <div id="results" class="results hidden">
+            <h2>📊 Podsumowanie zadania</h2>
+            <div id="resultsContent"></div>
+        </div>
+    </div>
+
+    <!-- Skrypty JavaScript -->
+<script src="js/utils/csv-export.js"></script>
+<script src="js/utils/email-service.js"></script>
+<script src="js/utils/recorder-manager.js"></script>
+<script src="js/data/data-constants.js"></script>
+<script src="js/generators/skp-generator.js"></script>
+<script src="js/generators/kata-generator.js"></script>
+<script src="js/generators/katb-generator.js"></script>
+<script src="js/generators/katb-generator.js"></script>
+<script src="js/generators/nastawnia-generator.js"></script>
+
+<!-- Moduły generatora nastawni -->
+<script src="js/generators/ND-LPR.js"></script>
+<script src="js/generators/ND-czerwone-swiatlo.js"></script>
+<script src="js/generators/ND-Audio.js"></script>
+<script src="js/generators/ND-NVR.js"></script>
+<script src="js/generators/ND-ND.js"></script>
+<script src="js/generators/ND-LCS-generator.js"></script>
+<script src="js/generators/ND-connector.js"></script>
+
+<script src="js/main.js"></script>
+
+</body>
+</html>

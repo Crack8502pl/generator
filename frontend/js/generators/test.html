@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System ND</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>System zarządzania ND</h1>
+    
+    <div id="nd-container"></div>
+    
+    <div id="lcs-container"></div>
+    
+    <div id="lpr-container"></div>
+
+    <!-- Skrypty muszą być dodane w odpowiedniej kolejności -->
+    <script src="ND-connector.js"></script>
+    <script src="ND-ND.js"></script>
+    <script src="ND-LCS.js"></script>
+    <script src="ND-LPR.js"></script>
+
+    <script>
+        // Inicjalizacja aplikacji po załadowaniu wszystkich skryptów
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Aplikacja została załadowana');
+        });
+    </script>
+</body>
+</html>
